@@ -1,4 +1,4 @@
-<h1 align="center">ECMenu</h1>
+# ECMenu
 
 <p align="center">
   <a href="README.md">English</a> ·

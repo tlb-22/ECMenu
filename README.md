@@ -1,4 +1,4 @@
-<h1 align="center">ECMenu</h1>
+# ECMenu
 
 <p align="center">
   <strong>English</strong> ·
