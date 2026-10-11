@@ -13,5 +13,5 @@ screenshots/
 /design/AppIcon/output/
 /design/AppIcon/.compose-staging.*/
 
-/Tests/VirtualMachine/Bootstrap/node_modules/
-/Tests/VirtualMachine/Local.json
+/Tests/Infrastructure/VirtualMachine/Bootstrap/node_modules/
+/Tests/Infrastructure/VirtualMachine/Local.json

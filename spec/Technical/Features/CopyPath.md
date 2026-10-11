@@ -69,7 +69,7 @@ macOS 26.5 SDK 的 `NSPasteboard.h` 明确 `clearContents` 清除内容并返回
 
 ## 验证与证据范围
 
-[虚拟机日常验收](../../../Tests/Main.md)从真实 Finder 菜单复制单项、多项和目录路径，并读取来宾系统剪贴板核对正文。仅保留 [CopyPathTests](../../../Tests/ECMenuTests/Commands/CopyPath/CopyPathTests.swift) 的系统写入失败与事实读取后等待主执行器期间取消两个例外，具体失败模式和必要性见[单元测试例外](../../../Tests/UnitTestExceptions.md)。SDK 核对版本为 macOS 26.5。
+[虚拟机日常验收](../../../Tests/Main.md)从真实 Finder 菜单复制单项、多项和目录路径，并读取来宾系统剪贴板核对正文。仅保留 [CopyPathTests](../../../Tests/Unit/ECMenuTests/Commands/CopyPath/CopyPathTests.swift) 的系统写入失败与事实读取后等待主执行器期间取消两个例外，具体失败模式和必要性见[单元测试例外](../../../Tests/Unit/Exceptions.md)。SDK 核对版本为 macOS 26.5。
 
 多选验收先核对完整路径集合、数量和换行，再在同一来源窗口与选择上执行 Finder 自身的“拷贝为路径名”，用标准 shell 引用解码比较顺序。macOS 26.6.2 的来宾观察中，AX 选择数组与这两个实际剪贴板输出的顺序不同，ECMenu 输出与 Finder 原生输出顺序一致；AX 顺序不能作为 FinderSync 顺序的独立预期。API 契约和证据边界见[菜单稳定协议](../FinderMenuCapture.md#稳定协议)。
 

@@ -13,7 +13,7 @@ struct UserFocusApplicationIdentity: Codable, Equatable {
     let executablePath: String?
 }
 
-/// 恢复阶段对当前运行应用集合做出的有限决定。
+/// 手动开发命令结束后对当前运行应用集合做出的有限决定。
 enum UserFocusRestorationResolution: Equatable {
     case application(UserFocusApplicationIdentity)
     case unavailable

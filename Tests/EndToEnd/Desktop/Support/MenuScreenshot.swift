@@ -10,8 +10,21 @@ import ScreenCaptureKit
 import UniformTypeIdentifiers
 
 enum MenuScreenshot {
-    static func requireVisible(_ menu: MenuSnapshot) async throws {
-        _ = try await menuWindow(matching: menu)
+    /// 单次核对 AX 快照对应的真实窗口；尚未出现由会话继续读取新的 AX 事实。
+    static func isVisible(_ menu: MenuSnapshot) async throws -> Bool {
+        let content: SCShareableContent
+        do {
+            content = try await SCShareableContent.current
+        } catch {
+            throw AutomationFailure.screenshotFailed(error.localizedDescription)
+        }
+        let matches = visibleMenuWindows(in: content.windows, matching: menu)
+        guard matches.count <= 1 else {
+            throw AutomationFailure.screenshotFailed(
+                "Expected one Finder menu window, found \(matches.count)."
+            )
+        }
+        return matches.count == 1
     }
 
     static func captureWindow(number: CGWindowID, includingChildWindows: Bool = false, to outputURL: URL) async throws {
@@ -130,9 +143,7 @@ enum MenuScreenshot {
             let finderWindows = content.windows.filter {
                 $0.owningApplication?.processID == menu.processIdentifier
             }
-            let matches = finderWindows.filter {
-                $0.isOnScreen && framesMatch($0.frame, menu.rect)
-            }
+            let matches = visibleMenuWindows(in: finderWindows, matching: menu)
             if matches.count == 1 { return matches[0] }
             guard matches.isEmpty, Date() < deadline else {
                 let candidates = finderWindows.map {
@@ -147,6 +158,13 @@ enum MenuScreenshot {
             }
             // AX 菜单已打开后，窗口服务器可能尚未公布对应的可捕获窗口。
             try await Task.sleep(for: .seconds(AutomationTiming.poll))
+        }
+    }
+
+    private static func visibleMenuWindows(in windows: [SCWindow], matching menu: MenuSnapshot) -> [SCWindow] {
+        windows.filter {
+            $0.owningApplication?.processID == menu.processIdentifier
+                && $0.isOnScreen && framesMatch($0.frame, menu.rect)
         }
     }
 

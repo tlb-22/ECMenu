@@ -13,6 +13,7 @@ nonisolated enum ProjectTestDirectory {
         .deletingLastPathComponent()
         .deletingLastPathComponent()
         .deletingLastPathComponent()
+        .deletingLastPathComponent()
 
     /// 当前 test host 的单次运行目录。
     private static let unitRunDirectoryURL: URL = {

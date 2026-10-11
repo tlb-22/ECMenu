@@ -166,6 +166,6 @@ Extension 只在初始化和收到信号时查询，拉取期间的新提示会�
 
 总开关关闭后的全部命令缺席需要覆盖完整的有界菜单观察窗口；命令启用检查则等待独立期望标题实际出现。等待、身份与选择复核由[菜单稳定协议](../FinderMenuCapture.md#稳定协议)统一维护，防止把扩展尚未填充的单次菜单快照解释为开关生效。
 
-[副本测试](../../../Tests/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)只保留多个刷新信号与旧响应的精确交错，必要性见[单元测试例外](../../../Tests/UnitTestExceptions.md)。测试观察公开的最终配置、模板及缓存，不要求生产暴露内部刷新状态。
+[副本测试](../../../Tests/Unit/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)只保留多个刷新信号与旧响应的精确交错，必要性见[单元测试例外](../../../Tests/Unit/Exceptions.md)。测试观察公开的最终配置、模板及缓存，不要求生产暴露内部刷新状态。
 
 分布式通知和偏好的完成语义由上述官方契约界定；真实菜单更新并不证明任意通知均可靠到达。配置快照、模板不可用与传输失败的区别，以及长列表、键盘、辅助功能和取消拖动的行为，仅以实际流程报告的执行范围作为当前验收证据。既有带版本的 Finder 与认证观察见[菜单执行验证](MenuExecution.md#实机证据与适用范围)，历史运行标识见[架构验证](../Architecture/Verification.md)。

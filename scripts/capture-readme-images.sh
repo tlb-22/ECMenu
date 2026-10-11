@@ -27,7 +27,7 @@ readonly test_directory="$project_root/.artifacts/scratch/tests/$run_name"
 readonly composition_directory="$project_root/.artifacts/scratch/previews/$run_name"
 readonly log_directory="$project_root/.artifacts/scratch/logs/$run_name"
 readonly documentation_image_directory="$project_root/.docs/images"
-readonly composer_source="$project_root/Tests/READMEImageCapture/Support/READMEOverviewComposer.swift"
+readonly composer_source="$project_root/Tests/Infrastructure/READMEImages/Support/READMEOverviewComposer.swift"
 readonly composer_executable="$test_directory/READMEOverviewComposer"
 readonly composer_build_log="$log_directory/composer-build.log"
 readonly composer_log="$log_directory/composer.log"
@@ -41,7 +41,7 @@ readonly generated_chinese_image="$composition_directory/overview-zh-Hans.png"
 readonly temporary_english_image="$documentation_image_directory/.overview-en.$$.png"
 readonly temporary_chinese_image="$documentation_image_directory/.overview-zh-Hans.$$.png"
 readonly developer_directory="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
-readonly desktop_job_runner="$project_root/Tests/VirtualMachine/run-desktop-job.py"
+readonly desktop_job_runner="$project_root/Tests/Infrastructure/VirtualMachine/run-desktop-job.py"
 
 fail() {
     print -u2 -r -- "$1"
@@ -168,7 +168,7 @@ preview_output_directory="$(
         "Localized previews: "
 )" || fail "Could not resolve the Preview screenshot directory."
 
-# 真正的 Finder 模板通过用户管理流程准备，与固定 Preview 的三行内容保持对应。
+# 真正的 Finder 模板通过用户管理流程准备，与固定 Preview 的两行内容保持对应。
 source "$script_directory/lib/product-paths.sh"
 ecmenu_resolve_product_paths "$project_root/.derivedData/Build/Products/Debug" \
     || fail "Could not resolve the current Debug product for README templates."
@@ -207,7 +207,6 @@ if "$script_directory/capture-finder-menus.sh" \
     --language zh-Hans \
     --expect-template TXT \
     --expect-template Markdown \
-    --expect-template Word \
     new-file-submenu \
     | /usr/bin/tee "$finder_capture_stdout"; then
     :

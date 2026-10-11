@@ -1,10 +1,18 @@
 #!/bin/zsh
 
 # 验证少量已批准的故障注入单测、Preview 构建和捕获定义静态完整性。
-# 此入口用于普通 CI，不驱动桌面，也不代表产品端到端验收通过。
+# 应用承载的 XCTest 在开发机默认转入虚拟机；CI 和来宾在所在环境执行，不代表产品端到端验收通过。
 
 set -euo pipefail
 readonly project_root="${0:A:h:h}"
+if (( $# != 0 )); then
+    print -u2 'Usage: ./scripts/test-checks.sh'
+    exit 64
+fi
+if [[ "${CI:-}" != true ]]; then
+    source "$project_root/scripts/lib/test-vm.sh"
+    ecmenu_run_in_test_vm checks
+fi
 readonly run_name="$(date '+%Y%m%d-%H%M%S')-checks-$$"
 readonly result="$project_root/.artifacts/scratch/tests/$run_name"
 mkdir -p "$result"

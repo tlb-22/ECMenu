@@ -221,11 +221,12 @@ final class FinderMenuSession {
                 kAXChildrenAttribute as CFString, of: parent
             ) where try AXClient.string(kAXRoleAttribute as CFString, of: candidate) == kAXMenuRole as String {
                 if case .ready = try observeMenu(candidate) {
-                    let submenu = Submenu(element: candidate, snapshot: try waitForStableMenu(candidate))
-                    // 打开通知未必对应当前 AX 子菜单对象；以真实可见窗口和不变的快照为准。
-                    try await MenuScreenshot.requireVisible(submenu.snapshot)
-                    try verifySubmenu(submenu)
-                    return submenu
+                    let submenu = Submenu(element: candidate, snapshot: try waitForStableMenu(candidate, before: deadline))
+                    // AX 与窗口服务器分别公布布局；未对应时继续重新枚举子菜单并读取当前快照。
+                    if try await MenuScreenshot.isVisible(submenu.snapshot) {
+                        try verifySubmenu(submenu)
+                        return submenu
+                    }
                 }
             }
             guard Date() < deadline else { throw AutomationFailure.menuItemUnavailable(parentTitle) }
@@ -1184,8 +1185,9 @@ final class FinderMenuSession {
         return deltaX * deltaX + deltaY * deltaY
     }
 
-    private func waitForStableMenu(_ menu: AXUIElement, requiredTitles: Set<String> = []) throws -> MenuSnapshot {
-        let deadline = Date().addingTimeInterval(requiredTitles.isEmpty ? AutomationTiming.stability : AutomationTiming.target)
+    private func waitForStableMenu(_ menu: AXUIElement, requiredTitles: Set<String> = [], before limit: Date? = nil) throws -> MenuSnapshot {
+        let deadline = min(limit ?? .distantFuture,
+                           Date().addingTimeInterval(requiredTitles.isEmpty ? AutomationTiming.stability : AutomationTiming.target))
         var previous: MenuSnapshot?
         while Date() < deadline {
             switch try observeMenu(menu) {

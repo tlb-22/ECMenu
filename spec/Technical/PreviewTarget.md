@@ -13,7 +13,7 @@
 | 职责模块 | 核心类型或脚本与源码入口 | 输入、输出与状态所有权 |
 |---|---|---|
 | 构建、启动与截图编排 | [preview-ui.sh](../../scripts/preview-ui.sh)、[capture-previews.sh](../../scripts/capture-previews.sh) | Preview ID、语言 → 通过 `xcodebuild` 构建并启动独立产物；批量脚本持有捕获进程和输出文件，依据 `READY` 窗口编号通过 GUI launchd 启动已授权的 `FinderMenuAutomation window-image`，使用 ScreenCaptureKit 捕获 |
-| 独立进程入口 | `ECMenuPreviewsApp` / `PreviewApplicationDelegate` · [PreviewApp.swift](../../Tests/ECMenuPreviews/PreviewApp.swift) | AppKit 启动通知 → 查询场景列表或呈现指定场景；入口保活代理并管理 `NSApplication` 事件循环 |
+| 独立进程入口 | `ECMenuPreviewsApp` / `PreviewApplicationDelegate` · [PreviewApp.swift](../../Tests/ECMenuPreviews/PreviewApp.swift) | 命令行参数 → 查询场景列表或呈现指定场景；`--list` 在创建 AppKit 应用前返回，图形入口保活代理并管理 `NSApplication` 事件循环 |
 | 场景注册 | `PreviewComposition` · [PreviewComposition.swift](../../Tests/ECMenuPreviews/PreviewComposition.swift) | 具体 Case 类型 → 唯一的 ID 与呈现入口注册表；纯内存声明 |
 | 会话与截图协议 | `PreviewRuntime` / `PreviewReadinessCoordinator` · [PreviewRuntime.swift](../../Tests/ECMenuPreviews/PreviewRuntime.swift) | 启动参数与注册表 → 当前 Case 会话或错误界面；runtime 保活会话，协调器在主 RunLoop 检查 AppKit 窗口焦点、编号与布局，并通过标准输出发布 READY 与结果，通过 SIGUSR1 接收截图完成信号 |
 | 场景状态与生产界面装配 | [Cases/](../../Tests/ECMenuPreviews/Cases/)，设置页共用 `StatusPagePreviewSession` · [StatusPagePreview.swift](../../Tests/ECMenuPreviews/Cases/StatusPagePreview.swift) | 固定场景参数 → SwiftUI/AppKit 界面；各会话拥有内存状态与操作回调。README 场景在 [READMEStatusPagePreview.swift](../../Tests/ECMenuPreviews/Cases/READMEStatusPagePreview.swift) 通过 `NSWorkspace` 读取真实应用图标 |
@@ -40,6 +40,6 @@
 
 原生 `window-image` 入口在捕获前创建并完成 AppKit 应用初始化，与其他桌面命令使用相同启动边界。2026-10-11 在 macOS 26.6.2、Xcode 27.0 来宾中，运行标识 `20261011-065806-vm-previews-84977` 完成全部 12 个场景的中英文 24 张 PNG 捕获、导出及清理；人工抽查四张未发现布局问题。生成成功表达窗口与截图协议完成，全部视觉状态仍以实际截图检查为准。
 
-README 设置页场景分别覆盖通用、右键菜单和文件模板三个页面，与状态覆盖场景使用不同 Preview ID：前者固定全部开关开启，并在 Preview 边界通过 Launch Services 严格读取所需外部应用的真实图标；后者继续保留未批准、未启用和应用缺失等状态。README 文件模板页面依次使用 TXT、Markdown、Word 三条内存样例，对应 `.txt`、`.md`、`.docx` 后缀。两者只共享生产 renderer 与无副作用的预览会话，不向产品代码加入文档截图分支。
+README 设置页场景分别覆盖通用、右键菜单和文件模板三个页面，与状态覆盖场景使用不同 Preview ID：前者固定全部开关开启，并在 Preview 边界通过 Launch Services 严格读取所需外部应用的真实图标；后者继续保留未批准、未启用和应用缺失等状态。README 文件模板页面依次使用 TXT、Markdown 两条内存样例，对应 `.txt`、`.md` 后缀。两者只共享生产 renderer 与无副作用的预览会话，不向产品代码加入文档截图分支。
 
 构建、启动与截图参数见[开发脚本](../../scripts/Main.md#视觉证据与交付)。

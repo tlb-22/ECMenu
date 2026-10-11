@@ -28,8 +28,8 @@ from dataclasses import dataclass
 from typing import Optional, Union
 
 ROOT = Path(__file__).resolve().parent.parent
-CONFIGURATION_DIRECTORY = ROOT / "Tests/VirtualMachine"
-ACTIONS = ("prepare", "run", "desktop", "integration", "finder", "previews", "readme")
+CONFIGURATION_DIRECTORY = ROOT / "Tests/Infrastructure/VirtualMachine"
+ACTIONS = ("prepare", "run", "desktop", "integration", "finder", "previews", "readme", "checks")
 
 
 @dataclass(frozen=True)
@@ -54,7 +54,7 @@ def load_configuration() -> VMConfiguration:
             value = json.loads(path.read_text())
         except FileNotFoundError:
             if name == "Local.json":
-                raise RuntimeError("缺少本机 VM 配置；复制 Tests/VirtualMachine/Local.example.json 为 Local.json 并填写本机环境") from None
+                raise RuntimeError("缺少本机 VM 配置；复制 Tests/Infrastructure/VirtualMachine/Local.example.json 为 Local.json 并填写本机环境") from None
             raise RuntimeError(f"缺少 VM 项目配置 {name}") from None
         except (OSError, ValueError):
             raise RuntimeError(f"VM 配置 {name} 无法读取或 JSON 格式无效") from None
@@ -124,7 +124,7 @@ def snapshot(output):
     names = checked(["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"], cwd=ROOT)
     with tarfile.open(output, "w:gz", dereference=False) as archive:
         for name in sorted(set(filter(None, names.split("\0")))):
-            if name == "Tests/VirtualMachine/Local.json":
+            if name == "Tests/Infrastructure/VirtualMachine/Local.json":
                 continue
             path = ROOT / name
             if path.exists() or path.is_symlink():
@@ -156,7 +156,7 @@ def signing(run, configuration, initialize=False):
     helper = run / "SigningIdentity"
     with (run / "signing-helper-build.log").open("w") as stream:
         subprocess.run(["xcrun", "swiftc", "-module-cache-path", str(run / "module-cache"),
-                        str(ROOT / "Tests/VirtualMachine/SigningIdentity.swift"), "-o", str(helper)],
+                        str(ROOT / "Tests/Infrastructure/VirtualMachine/SigningIdentity.swift"), "-o", str(helper)],
                        stdout=stream, stderr=stream, check=True)
     team = next(iter(teams))
     signing_configuration = configuration.environment_directory / "projects" / configuration.project_id / "signing.json"
@@ -230,7 +230,7 @@ def main():
     args = parser.parse_args()
     if args.arguments[:1] == ["--"]:
         args.arguments = args.arguments[1:]
-    if args.action in ("prepare", "run", "desktop"):
+    if args.action in ("prepare", "run", "desktop", "checks"):
         if args.arguments in (["--help"], ["-h"]):
             parser.print_help()
             return 0

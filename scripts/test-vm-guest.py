@@ -34,10 +34,10 @@ def bootstrap():
     (EXCHANGE / "guest-process.json").write_text(json.dumps({"pid": os.getpid(), "name": payload["name"]}) + "\n")
     with (run / "bootstrap.log").open("w") as log:
         subprocess.run(["/usr/bin/tar", "-xzf", str(source), "-C", str(project),
-            "Tests/VirtualMachine/desktop_job.py", "Tests/VirtualMachine/run-desktop-job.py"],
+            "Tests/Infrastructure/VirtualMachine/desktop_job.py", "Tests/Infrastructure/VirtualMachine/run-desktop-job.py"],
             stdin=subprocess.DEVNULL, stdout=log, stderr=log, check=True)
     # 导入、解锁及 xcodebuild 与其签名服务共用 GUI 安全会话；FIFO 不保存输入。
-    runner = project / "Tests/VirtualMachine/run-desktop-job.py"
+    runner = project / "Tests/Infrastructure/VirtualMachine/run-desktop-job.py"
     result = subprocess.run(["/usr/bin/python3", str(runner), "--timeout", "2400",
         str(run / "coordinator"), "--", "/usr/bin/python3", str(EXCHANGE / "guest.py"), "--gui"],
         cwd=project, stdin=sys.stdin.buffer)
@@ -219,13 +219,13 @@ def main():
             raise RuntimeError("源码归档与宿主记录不一致")
         report["sourceSha256"] = source_hash
         command(["/usr/bin/tar", "-xzf", str(EXCHANGE / "source.tar.gz"), "-C", str(stage)], "source-extract")
-        command(["/usr/bin/rsync", "-a", "--delete", "--exclude=.derivedData/", "--exclude=.artifacts/", "--exclude=Tests/VirtualMachine/Bootstrap/node_modules/", str(stage) + "/", str(project) + "/"], "source-sync")
+        command(["/usr/bin/rsync", "-a", "--delete", "--exclude=.derivedData/", "--exclude=.artifacts/", "--exclude=Tests/Infrastructure/VirtualMachine/Bootstrap/node_modules/", str(stage) + "/", str(project) + "/"], "source-sync")
         shutil.rmtree(stage)
         actual_xcode = command(["xcodebuild", "-version"], "tools", capture=True).strip()
         if actual_xcode != payload["xcode"]:
             raise RuntimeError("当前 Xcode 与公共封存版本不一致")
         report["xcode"] = actual_xcode
-        command(["xcrun", "swiftc", "-module-cache-path", str(run / "module-cache"), str(project / "Tests/VirtualMachine/SigningIdentity.swift"), "-o", str(helper)], "signing-helper-build")
+        command(["xcrun", "swiftc", "-module-cache-path", str(run / "module-cache"), str(project / "Tests/Infrastructure/VirtualMachine/SigningIdentity.swift"), "-o", str(helper)], "signing-helper-build")
         previous_keychains = shlex.split(subprocess.check_output(
             ["/usr/bin/security", "list-keychains", "-d", "user"], text=True))
         imported = json.loads(command([str(helper), "import", str(keychain)], "signing-import", input=json.dumps(payload["signing"]), capture=True))
@@ -247,22 +247,25 @@ def main():
                 command(["/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister", "-f", str(app)], f"application-{index}-register")
                 applications.append({"identifier": information["CFBundleIdentifier"], "version": information["CFBundleShortVersionString"], "build": information["CFBundleVersion"]})
             report["targetApplications"] = applications
-            command(["/usr/bin/python3", "Tests/VirtualMachine/prepare-application-settings.py", str(run / "application-settings")], "application-settings")
+            command(["/usr/bin/python3", "Tests/Infrastructure/VirtualMachine/prepare-application-settings.py", str(run / "application-settings")], "application-settings")
             command(["/bin/zsh", "scripts/run-debug.sh", "--build-only"], "build")
             for scheme in ("FinderMenuAutomation", "ECMenuPreviews", "ContextCommandSender"):
                 command(["xcodebuild", "-project", "ECMenu.xcodeproj", "-scheme", scheme, "-configuration", "Debug", "-destination", "platform=macOS,arch=arm64", "-derivedDataPath", ".derivedData", "build", "-quiet"], "build-" + scheme)
-            command(["/usr/bin/python3", "Tests/VirtualMachine/prepare-permissions.py", str(project / ".derivedData/Build/Products/Debug/FinderMenuAutomation.app/Contents/MacOS/FinderMenuAutomation"), str(run / "permissions")], "permissions", authentication=True)
-            command(["/usr/bin/python3", "Tests/VirtualMachine/run-desktop-job.py", "--timeout", "120", str(run / "template-applications-job"), "--",
+            command(["/usr/bin/python3", "Tests/Infrastructure/VirtualMachine/prepare-permissions.py", str(project / ".derivedData/Build/Products/Debug/FinderMenuAutomation.app/Contents/MacOS/FinderMenuAutomation"), str(run / "permissions")], "permissions", authentication=True)
+            command(["/usr/bin/python3", "Tests/Infrastructure/VirtualMachine/run-desktop-job.py", "--timeout", "120", str(run / "template-applications-job"), "--",
                      str(project / ".derivedData/Build/Products/Debug/FinderMenuAutomation.app/Contents/MacOS/FinderMenuAutomation"),
                      "prepare-external-applications", str(run / "template-applications")], "template-applications")
             stop_product()
             subprocess.run(["defaults", "delete", "com.axiomace.ecmenu.debug"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             shutil.rmtree(Path.home() / "Library/Application Support/com.axiomace.ecmenu.debug", ignore_errors=True)
+        elif payload["action"] == "checks":
+            # 构建及应用承载的 XCTest 留在来宾；无需录屏驱动或系统设置准备。
+            command(["/bin/zsh", "scripts/test-checks.sh"], "checks")
         else:
             command(["/bin/zsh", "scripts/run-debug.sh", "--build-only"], "build")
             command(["xcodebuild", "-project", "ECMenu.xcodeproj", "-scheme", "FinderMenuAutomation", "-configuration", "Debug", "-destination", "platform=macOS,arch=arm64", "-derivedDataPath", ".derivedData", "build", "-quiet"], "build-driver")
             command(["/usr/bin/open", "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"], "capture-settings")
-            command(["/usr/bin/python3", "Tests/VirtualMachine/run-desktop-job.py", "--timeout", "60", str(run / "capture-permission-job"), "--",
+            command(["/usr/bin/python3", "Tests/Infrastructure/VirtualMachine/run-desktop-job.py", "--timeout", "60", str(run / "capture-permission-job"), "--",
                      str(project / ".derivedData/Build/Products/Debug/FinderMenuAutomation.app/Contents/MacOS/FinderMenuAutomation"),
                      "prepare-capture", str(run / "capture-ready.png")], "capture-permission")
             command(["/usr/bin/pkill", "-x", "System Settings"], "capture-settings-close")

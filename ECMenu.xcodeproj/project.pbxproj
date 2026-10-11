@@ -91,14 +91,14 @@
 			);
 			target = I10000000000000000000006 /* ContextCommandSender */;
 		};
-		I1000000000000000000000A /* Exceptions for "Tests/Integration" folder in "ContextCommandSender" target */ = {
+		I1000000000000000000000A /* Exceptions for "Tests/EndToEnd/IPC" folder in "ContextCommandSender" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				ContextCommandSender-Info.plist,
 			);
 			target = I10000000000000000000006 /* ContextCommandSender */;
 		};
-		Q1000000000000000000000A /* Exceptions for "Tests/FinderMenuCapture" folder in "FinderMenuAutomation" target */ = {
+		Q1000000000000000000000A /* Exceptions for "Tests/EndToEnd/Desktop" folder in "FinderMenuAutomation" target */ = {
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Contexts/BasicContextScenarios.sh,
@@ -139,22 +139,22 @@
 			path = ECMenuShared;
 			sourceTree = "<group>";
 		};
-		E10000000000000000000003 /* Tests/ECMenuTests */ = {
+		E10000000000000000000003 /* Tests/Unit/ECMenuTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Tests/ECMenuTests;
+			path = Tests/Unit/ECMenuTests;
 			sourceTree = "<group>";
 		};
-		H10000000000000000000007 /* Tests/ECMenuFinderExtensionTests */ = {
+		H10000000000000000000007 /* Tests/Unit/ECMenuFinderExtensionTests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			path = Tests/ECMenuFinderExtensionTests;
+			path = Tests/Unit/ECMenuFinderExtensionTests;
 			sourceTree = "<group>";
 		};
-		I10000000000000000000002 /* Tests/Integration */ = {
+		I10000000000000000000002 /* Tests/EndToEnd/IPC */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				I1000000000000000000000A /* Exceptions for "Tests/Integration" folder in "ContextCommandSender" target */,
+				I1000000000000000000000A /* Exceptions for "Tests/EndToEnd/IPC" folder in "ContextCommandSender" target */,
 			);
-			path = Tests/Integration;
+			path = Tests/EndToEnd/IPC;
 			sourceTree = "<group>";
 		};
 		P10000000000000000000003 /* Tests/ECMenuPreviews */ = {
@@ -162,12 +162,12 @@
 			path = Tests/ECMenuPreviews;
 			sourceTree = "<group>";
 		};
-		Q10000000000000000000002 /* Tests/FinderMenuCapture */ = {
+		Q10000000000000000000002 /* Tests/EndToEnd/Desktop */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			exceptions = (
-				Q1000000000000000000000A /* Exceptions for "Tests/FinderMenuCapture" folder in "FinderMenuAutomation" target */,
+				Q1000000000000000000000A /* Exceptions for "Tests/EndToEnd/Desktop" folder in "FinderMenuAutomation" target */,
 			);
-			path = Tests/FinderMenuCapture;
+			path = Tests/EndToEnd/Desktop;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -231,13 +231,37 @@
 				2863D49130273A440090DB7A /* ECMenu */,
 				A10000000000000000000003 /* ECMenuFinderExtension */,
 				D10000000000000000000001 /* ECMenuShared */,
-				P10000000000000000000003 /* Tests/ECMenuPreviews */,
-				E10000000000000000000003 /* Tests/ECMenuTests */,
-				H10000000000000000000007 /* Tests/ECMenuFinderExtensionTests */,
-				I10000000000000000000002 /* Tests/Integration */,
-				Q10000000000000000000002 /* Tests/FinderMenuCapture */,
+				T10000000000000000000001 /* Tests */,
 				2863D49030273A440090DB7A /* Products */,
 			);
+			sourceTree = "<group>";
+		};
+		T10000000000000000000001 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				T10000000000000000000002 /* EndToEnd */,
+				T10000000000000000000003 /* Unit */,
+				P10000000000000000000003 /* Tests/ECMenuPreviews */,
+			);
+			name = Tests;
+			sourceTree = "<group>";
+		};
+		T10000000000000000000002 /* EndToEnd */ = {
+			isa = PBXGroup;
+			children = (
+				Q10000000000000000000002 /* Tests/EndToEnd/Desktop */,
+				I10000000000000000000002 /* Tests/EndToEnd/IPC */,
+			);
+			name = EndToEnd;
+			sourceTree = "<group>";
+		};
+		T10000000000000000000003 /* Unit */ = {
+			isa = PBXGroup;
+			children = (
+				E10000000000000000000003 /* Tests/Unit/ECMenuTests */,
+				H10000000000000000000007 /* Tests/Unit/ECMenuFinderExtensionTests */,
+			);
+			name = Unit;
 			sourceTree = "<group>";
 		};
 		2863D49030273A440090DB7A /* Products */ = {
@@ -319,7 +343,7 @@
 				E1000000000000000000000F /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				E10000000000000000000003 /* Tests/ECMenuTests */,
+				E10000000000000000000003 /* Tests/Unit/ECMenuTests */,
 			);
 			name = ECMenuTests;
 			packageProductDependencies = (
@@ -342,7 +366,7 @@
 				H10000000000000000000006 /* PBXTargetDependency */,
 			);
 			fileSystemSynchronizedGroups = (
-				H10000000000000000000007 /* Tests/ECMenuFinderExtensionTests */,
+				H10000000000000000000007 /* Tests/Unit/ECMenuFinderExtensionTests */,
 			);
 			name = ECMenuFinderExtensionTests;
 			packageProductDependencies = (
@@ -365,7 +389,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				D10000000000000000000001 /* ECMenuShared */,
-				I10000000000000000000002 /* Tests/Integration */,
+				I10000000000000000000002 /* Tests/EndToEnd/IPC */,
 			);
 			name = ContextCommandSender;
 			packageProductDependencies = (
@@ -411,7 +435,7 @@
 			dependencies = (
 			);
 			fileSystemSynchronizedGroups = (
-				Q10000000000000000000002 /* Tests/FinderMenuCapture */,
+				Q10000000000000000000002 /* Tests/EndToEnd/Desktop */,
 			);
 			name = FinderMenuAutomation;
 			packageProductDependencies = (
@@ -927,13 +951,13 @@
 		I10000000000000000000007 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Tests/Integration/ContextCommandSender.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Tests/EndToEnd/IPC/ContextCommandSender.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = GVPW27HJZ5;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Tests/Integration/ContextCommandSender-Info.plist;
+				INFOPLIST_FILE = Tests/EndToEnd/IPC/ContextCommandSender-Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				OTHER_CODE_SIGN_FLAGS = "--identifier $(ECMENU_FINDER_EXTENSION_BUNDLE_IDENTIFIER)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.axiomace.ecmenu.test.ipcsender;
@@ -947,13 +971,13 @@
 		I10000000000000000000008 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGN_ENTITLEMENTS = Tests/Integration/ContextCommandSender.entitlements;
+				CODE_SIGN_ENTITLEMENTS = Tests/EndToEnd/IPC/ContextCommandSender.entitlements;
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = GVPW27HJZ5;
 				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = Tests/Integration/ContextCommandSender-Info.plist;
+				INFOPLIST_FILE = Tests/EndToEnd/IPC/ContextCommandSender-Info.plist;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				OTHER_CODE_SIGN_FLAGS = "--identifier $(ECMENU_FINDER_EXTENSION_BUNDLE_IDENTIFIER)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.axiomace.ecmenu.test.ipcsender;

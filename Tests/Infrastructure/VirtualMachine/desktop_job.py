@@ -33,7 +33,7 @@ class DesktopJob:
         executable = Path(command[0])
         if not executable.is_absolute() or not executable.is_file():
             raise DesktopJobFailure("桌面作业需要现存可执行文件的绝对路径")
-        project = Path(__file__).resolve().parents[2]
+        project = Path(__file__).resolve().parents[3]
         self.output = Path(output).resolve()
         if not self.output.is_relative_to(project):
             raise DesktopJobFailure("桌面作业产物必须位于来宾项目仓库内")
@@ -56,7 +56,7 @@ class DesktopJob:
     def start(self):
         definition = {"Label": self.label, "ProgramArguments": self.command, "RunAtLoad": True,
                       "StandardOutPath": str(self.stdout_path), "StandardErrorPath": str(self.stderr_path),
-                      "StandardInPath": "/dev/null", "WorkingDirectory": str(Path(__file__).resolve().parents[2])}
+                      "StandardInPath": "/dev/null", "WorkingDirectory": str(Path(__file__).resolve().parents[3])}
         if self.environment:
             definition["EnvironmentVariables"] = self.environment
         if self.input_stream is not None:

@@ -12,8 +12,13 @@ enum ECMenuPreviewsApp {
     /// `NSApplication` 不保留弱引用 delegate，因此由入口显式保活。
     private static let applicationDelegate = PreviewApplicationDelegate()
 
-    /// 创建标准前台应用并进入 AppKit 事件循环。
+    /// 列表查询直接输出；界面预览创建标准前台应用并进入事件循环。
     static func main() {
+        if PreviewRuntime.shouldListAvailablePreviews {
+            PreviewRuntime.printAvailablePreviewIDs()
+            return
+        }
+
         let application = NSApplication.shared
         application.setActivationPolicy(.regular)
         application.delegate = applicationDelegate
@@ -27,14 +32,8 @@ private final class PreviewApplicationDelegate:
     NSObject,
     NSApplicationDelegate
 {
-    /// 呈现指定预览，或响应脚本查询可用预览的请求。
+    /// 呈现指定预览。
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if PreviewRuntime.shouldListAvailablePreviews {
-            PreviewRuntime.printAvailablePreviewIDs()
-            NSApp.terminate(nil)
-            return
-        }
-
         PreviewRuntime.presentRequestedPreview()
     }
 

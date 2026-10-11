@@ -15,7 +15,7 @@
 | `./scripts/test.sh` | 在 guest 构建当前代码，执行真实桌面流程、双语菜单、签名 IPC 与 8 个故障注入例外，单独记录人工检查项 |
 | `python3 scripts/test-vm.py desktop` | 在一次性 guest 单独执行产品桌面流程，导出自动检查与待人工检查报告 |
 | `./scripts/test-integration.sh` | 在一次性 guest 运行独立签名 IPC 流程与实际文件结果检查 |
-| `./scripts/test-checks.sh` | 普通 CI 的构建、注册表、捕获定义与故障注入检查，覆盖范围独立报告 |
+| `./scripts/test-checks.sh` | 开发机默认进入 VM，普通 CI 在 runner 中执行构建、注册表、捕获定义与故障注入检查 |
 
 `run-debug.sh --build-only` 只构建并核对产品，`--no-build` 使用已构建产品，两者互斥。手动开发入口按当前产物的精确路径管理进程；Debug 与 Release 数据隔离，两个 Finder Extension 不得同时启用。手动启动与环境切换结束后恢复原前台应用，虚拟机流程无需宿主焦点或 Finder 窗口保护。
 
@@ -33,13 +33,13 @@
 
 截图可人工检查，当前没有图像断言。外部应用流程保存真实 ECMenu 菜单操作、应用版本、独立目标清单与全部可见窗口截图；目标内容和终端工作目录由人工检查。自动阶段完成且存在人工项时，桌面及虚拟机报告为 `review-pending`，流程退出 0；执行、导出或清理失败仍非零退出。独立 Preview 的内存状态用于视觉证据，产品功能通过实际应用与 Finder 流程验收。正式产物位于 `.artifacts/releases/<version>+<build>/`；当前发布采用 Apple Development 签名，不执行公证和网络发布。
 
-README 捕获在 guest 中通过真实模板管理页准备 TXT、Markdown、Word，默认文件名为 `untitled.txt`、`untitled.md`、`untitled.docx`，再拍摄真实 Finder 子菜单；重复 `--expect-template <title>` 参数提供独立的实际模板行顺序期望。fixture 输入、已提交索引、设置页截图和子菜单行回执随本轮证据导出。
+README 捕获在 guest 中通过真实模板管理页准备 TXT、Markdown，默认文件名为 `untitled.txt`、`untitled.md`，再拍摄真实 Finder 子菜单；重复 `--expect-template <title>` 参数提供独立的实际模板行顺序期望。fixture 输入、已提交索引、设置页截图和子菜单行回执随本轮证据导出。
 
-显式新建文件验收使用 `FinderMenuAutomation create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file>`，只有实际文件字节与独立预期一致、且 Finder 选中新文件才通过。批量产品流程由 `desktop-suite <debug.app> <output-directory>` 执行；README 的三模板准备由 `prepare-readme-templates <debug.app> <output-directory>` 执行。桌面命令限定在 guest，权限与启动责任进程遵循虚拟机协议。
+显式新建文件验收使用 `FinderMenuAutomation create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file>`，只有实际文件字节与独立预期一致、且 Finder 选中新文件才通过。批量产品流程由 `desktop-suite <debug.app> <output-directory>` 执行；README 的两模板准备由 `prepare-readme-templates <debug.app> <output-directory>` 执行。桌面命令限定在 guest，权限与启动责任进程遵循虚拟机协议。
 
-桌面工具经 `python3 Tests/VirtualMachine/run-desktop-job.py [--timeout <seconds>] <new-result-directory> -- <absolute-executable> [arguments...]` 作为 GUI launchd 的直接子进程启动，保存输出与退出码。Preview 的 `window-image <window-id> <output.png>` 复用同一已授权的原生工具进行窗口截图；日常 `permissions` 只查询，项目模板通过系统设置添加并授权实际应用，再由新进程核对授权结果。
+桌面工具经 `python3 Tests/Infrastructure/VirtualMachine/run-desktop-job.py [--timeout <seconds>] <new-result-directory> -- <absolute-executable> [arguments...]` 作为 GUI launchd 的直接子进程启动，保存输出与退出码。Preview 的 `window-image <window-id> <output.png>` 复用同一已授权的原生工具进行窗口截图；日常 `permissions` 只查询，项目模板通过系统设置添加并授权实际应用，再由新进程核对授权结果。
 
-模板准备与每轮克隆使用 `prepare-capture <output.png>` 实际捕获系统设置窗口，检查驱动的额外系统录屏提示。原生准备只批准 Apple 签名进程中明确指向当前驱动的已识别提示，保留 PNG 和公开授权结果；完成后关闭系统设置，产品验收随后开始。
+模板准备与图形验收克隆使用 `prepare-capture <output.png>` 实际捕获系统设置窗口，检查驱动的额外系统录屏提示。原生准备只批准 Apple 签名进程中明确指向当前驱动的已识别提示，保留 PNG 和公开授权结果；完成后关闭系统设置，产品验收随后开始。
 
 ## 导航
 
@@ -50,3 +50,5 @@ README 捕获在 guest 中通过真实模板管理页准备 TXT、Markdown、Wor
 - [独立预览](../spec/Technical/PreviewTarget.md)与[菜单捕获](../spec/Technical/FinderMenuCapture.md)：可重复视觉定义及平台条件。
 
 项目模板必须关机，准备始终从公共基线建立新候选，来宾正常关机完成后事务替换；日常验收克隆项目模板使用已封存的应用、权限和构建缓存，引导前检查项目 scratch 不存在。公开启动设置、应用版本与封存边界在[虚拟机协议](../spec/Technical/Delivery/VirtualMachineTests.md#环境与缓存)维护，预热及普通启动截图不代替产品流程验收。普通源码变化直接同步并增量构建；工具、目标应用或公共封存变化时重新准备，构建耗时明显增加时可主动刷新缓存。共享 `.derivedData/` 或 Finder 登记状态的手动脚本顺序执行，虚拟机调度使用所有项目共用的内核锁。
+
+本机环境目录、模板名称、来宾工作区和宿主应用来源由被 Git 忽略的 `Tests/Infrastructure/VirtualMachine/Local.json` 提供，填写格式见[本机配置](../Tests/Infrastructure/VirtualMachine/Main.md#本机配置)。小功能按影响范围做针对性检查，大修改与发布前再运行完整测试。

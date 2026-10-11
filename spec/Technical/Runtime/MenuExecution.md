@@ -227,7 +227,7 @@ sequenceDiagram
 
 [虚拟机日常验收](../../../Tests/Main.md)使用当前成对签名产物，从真实 Finder 上下文读取菜单、点击命令并核对最终副作用；模板子菜单和一级入口顺序通过真实管理页修改及重开菜单确认。菜单截图和 AX 结构保留可检查的界面证据，运行报告记录实际执行的上下文与语言。
 
-[配置副本测试](../../../Tests/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)只验证刷新信号与旧响应的精确交错；[IPC 例外](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift)只验证 accept 资源故障和清理顺序。保留理由见[单元测试例外](../../../Tests/UnitTestExceptions.md)，它们不替代真实菜单、认证和文件操作验收。
+[配置副本测试](../../../Tests/Unit/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)只验证刷新信号与旧响应的精确交错；[IPC 例外](../../../Tests/Unit/ECMenuTests/IPC/ContextCommandTransportTests.swift)只验证 accept 资源故障和清理顺序。保留理由见[单元测试例外](../../../Tests/Unit/Exceptions.md)，它们不替代真实菜单、认证和文件操作验收。
 
 ### 实机证据与适用范围
 

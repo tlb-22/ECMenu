@@ -87,6 +87,6 @@ Xcode 26.6（17F113）附带的 macOS 26.5 SDK 将 Foundation `Progress` 定义�
 
 ## 验证与实机证据
 
-[虚拟机日常验收](../../../Tests/Main.md)通过实际参数窗口和处理结果验证压缩流程；进度面板的显示、取消、关闭后继续与后续任务显示，只以实际执行的批次和报告确认。[执行与进度例外](../../../Tests/ECMenuTests/CommandRuntime/ContextCommandExecutionTests.swift)保留快速完成先于显示回调、Router 释放取消两个精确生命周期交错，必要性见[单元测试例外](../../../Tests/UnitTestExceptions.md)。
+[虚拟机日常验收](../../../Tests/Main.md)通过实际参数窗口和处理结果验证压缩流程；进度面板的显示、取消、关闭后继续与后续任务显示，只以实际执行的批次和报告确认。[执行与进度例外](../../../Tests/Unit/ECMenuTests/CommandRuntime/ContextCommandExecutionTests.swift)保留快速完成先于显示回调、Router 释放取消两个精确生命周期交错，必要性见[单元测试例外](../../../Tests/Unit/Exceptions.md)。
 
 平台观察环境与 SDK 证据见上节。实机复验使用足够长的压缩批次，分别观察面板自动出现、单项取消、关闭后继续及后续新任务再次显示；记录 macOS 版本与前台应用。运行结果归入统一[测试记录](CommandExecution.md#验证入口)，不把仅存在测试定义描述为已经执行通过。

@@ -65,11 +65,11 @@ macOS 26.5 SDK `NSWorkspace.h` 明确异步打开回调的队列和成功/失败
 
 ## 验证与实机证据
 
-[虚拟机日常验收](../../../Tests/Main.md)在来宾安装实际 VS Code 与 iTerm2，从真实 Finder 菜单触发打开请求，检查命令适用范围、应用启动与可见窗口，并保存独立目标清单、应用版本和各应用全部可见窗口截图。定义见[外部应用验收](../../../Tests/FinderMenuCapture/Desktop/DesktopExternalApplicationsAcceptance.swift)。
+[虚拟机日常验收](../../../Tests/Main.md)在来宾安装实际 VS Code 与 iTerm2，从真实 Finder 菜单触发打开请求，检查命令适用范围、应用启动与可见窗口，并保存独立目标清单、应用版本和各应用全部可见窗口截图。定义见[外部应用验收](../../../Tests/EndToEnd/Desktop/Acceptance/DesktopExternalApplicationsAcceptance.swift)。
 
 外部应用安装、公开启动选项和一次性常规启动检查由项目模板准备拥有，版本适用范围见[环境与缓存](../Delivery/VirtualMachineTests.md#环境与缓存)。日常产品流程直接使用已准备应用，从真实 ECMenu 菜单触发请求。
 
-[ExternalApplicationWindows](../../../Tests/FinderMenuCapture/Support/ExternalApplicationWindows.swift)等待实际应用进程和 ScreenCaptureKit 中属于该 PID 的屏幕可见普通窗口（`windowLayer == 0`），为普通窗口绘制留出两秒后重新枚举，逐窗保存包含附属 sheet 的 PNG，并记录窗口编号、标题与图片路径清单。绘制等待不作为目标加载完成的断言。标题作为检查材料，不参与目标匹配；请求目录与文件由独立目标清单保存，人工据此对照真实内容。截图保留应用的首次引导和权限提示，驱动不操作这些界面。
+[ExternalApplicationWindows](../../../Tests/EndToEnd/Desktop/Support/ExternalApplicationWindows.swift)等待实际应用进程和 ScreenCaptureKit 中属于该 PID 的屏幕可见普通窗口（`windowLayer == 0`），为普通窗口绘制留出两秒后重新枚举，逐窗保存包含附属 sheet 的 PNG，并记录窗口编号、标题与图片路径清单。绘制等待不作为目标加载完成的断言。标题作为检查材料，不参与目标匹配；请求目录与文件由独立目标清单保存，人工据此对照真实内容。截图保留应用的首次引导和权限提示，驱动不操作这些界面。
 
 外部应用目标加载、窗口复用和终端工作目录由人工检查；报告使用 `review-pending`，由 `manualReview` 保存检查说明与证据。截图保留第三方应用当时的可见状态，包括可能出现的首次引导；驱动的边界是 ECMenu 菜单操作与系统应用窗口，避免依赖第三方应用内部控件、文案和快捷命令协议。
 

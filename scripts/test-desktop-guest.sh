@@ -9,13 +9,14 @@ readonly project_root="${script_path:h:h}"
 readonly developer_directory="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 readonly destination="${XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 readonly helper_identifier="com.axiomace.ecmenu.test.findermenuautomation"
-readonly desktop_job_runner="$project_root/Tests/VirtualMachine/run-desktop-job.py"
+readonly desktop_job_runner="$project_root/Tests/Infrastructure/VirtualMachine/run-desktop-job.py"
 
 if (( $# != 1 )); then
     print -u2 'Usage: ./scripts/test-desktop-guest.sh <absolute-scratch-result-directory>'
     exit 64
 fi
-[[ "$(/usr/sbin/sysctl -n kern.hv_vmm_present 2>/dev/null)" == 1 && "$(id -u)" == "$(stat -f%u /dev/console)" ]] || {
+[[ "$(/usr/sbin/sysctl -n kern.hv_vmm_present 2>/dev/null)" == 1 \
+    && "$(id -u)" == "$(/usr/bin/stat -f %u /dev/console)" ]] || {
     print -u2 'Desktop acceptance must run as the logged-in desktop account inside a virtual machine.'
     exit 1
 }

@@ -5,7 +5,7 @@
 
 import Foundation
 
-/// 让共享 IPC 代码在 XCTest loader 中仍能定位实际承载它的产品 Bundle。
+/// 通过所属代码定位产品 Bundle，使主应用与 Finder Extension 各自读取签名覆盖的身份配置。
 nonisolated private final class ApplicationIPCBundleToken {}
 
 /// 主应用与 Finder Extension 共享的定向本地 IPC 常量。

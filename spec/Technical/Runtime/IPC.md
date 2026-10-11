@@ -92,7 +92,7 @@ App Group 只让沙箱 Extension 到达组容器；权限为当前用户读写�
 | 认证客户端 | `AuthenticatedLocalSocketClient` | [AuthenticatedLocalSocketClient.swift](../../../ECMenuShared/Platform/IPC/AuthenticatedLocalSocketClient.swift) | send / fetch 请求 → 异步 completion，或测试用同步结果 | 并发 `DispatchQueue` 为每次操作建立独立连接；认证后等待空 ACK，再写请求；配置查询另外读取响应。`defer` 关闭该连接，不等待业务完成 |
 | 监听会话 | `AuthenticatedLocalSocketServer` | [AuthenticatedLocalSocketServer.swift](../../../ECMenuShared/Platform/IPC/AuthenticatedLocalSocketServer.swift) | 生产身份、sink/provider 回调、创建/停止意图 → 正在监听或失败回调 | `DispatchSource.makeReadSource`、串行 accept queue、并发 connection queue、`NSLock` 与延迟 `DispatchWorkItem`。唯一持有监听 descriptor 与 source；只在取消回调关闭 descriptor，再报告失败；暂停状态下停止会先取消重试并平衡 source 的 suspend/resume |
 | 单连接处理 | `AuthenticatedLocalSocketConnectionHandler`、`CommandMenuSettingsResponseWaiter` | [AuthenticatedLocalSocketConnectionHandler.swift](../../../ECMenuShared/Platform/IPC/AuthenticatedLocalSocketConnectionHandler.swift) | accepted descriptor → 一条已解码请求的 sink 调用或一份查询响应 | 上述认证/frame API、`JSONDecoder/JSONEncoder`、OSLog。handler 在 `defer` 唯一关闭传入连接；配置等待器使用 `NSLock`、`DispatchSemaphore.wait(timeout:)` 接受一次异步结果，重复 fulfill 是实现错误，等待期限失败释放连接 |
-| 主应用 IPC 入口 | `ApplicationIPCServer`、`ApplicationIPCListening` | [ApplicationIPCServer.swift](../../../ECMenu/IPC/ApplicationIPCServer.swift) | 已认证请求、注入的命令/快照边界 → 主应用调用或查询回复 | 以 `Task @MainActor` 适配应用依赖；监听 `state` 唯一保存在此。业务快照由[菜单配置能力](CommandMenuSettings.md)投影；命令调用不向传输层返回业务完成状态 |
+| 主应用 IPC 入口 | `ApplicationIPCServer` | [ApplicationIPCServer.swift](../../../ECMenu/IPC/ApplicationIPCServer.swift) | 已认证请求、注入的命令/快照边界 → 主应用调用或查询回复 | 以 `Task @MainActor` 适配应用依赖；监听 `state` 唯一保存在此。业务快照由[菜单配置能力](CommandMenuSettings.md)投影；命令调用不向传输层返回业务完成状态 |
 | 菜单变化系统信号 | `CommandMenuSettingsChannel` 的通知适配 | [CommandMenuSettingsSignal.swift](../../../ECMenuShared/Platform/IPC/CommandMenuSettingsSignal.swift) | 状态可能已变化 → 无正文系统通知 | `DistributedNotificationCenter.postNotificationName`；无到达回执。Extension 持有自己的 observer 与缓存，具体状态机见[副本同步](MenuExecution.md#配置副本同步) |
 
 `LocalSocketIO` 按字节 I/O、frame 和端点管理分布在三个文件：后两部分通过 Swift extension 实现，职责和源码入口以上表为准。`CommandMenuSettingsChannel` 的键与编解码定义位于共享契约，通知实现位于平台文件；`CommandMenuSettingsResponseWaiter` 仅服务单个连接，作为处理器的私有类型保留在同一文件。
@@ -101,8 +101,8 @@ App Group 只让沙箱 Extension 到达组容器；权限为当前用户读写�
 
 ## 验证入口与证据范围
 
-真实主应用与 Finder Extension 的成功通信由[虚拟机日常验收](../../../Tests/Main.md)从菜单点击、配置更新及最终业务副作用共同确认。[集成 Sender](../../../Tests/Integration/ContextCommandSender.swift)保留独立签名进程入口，用于配置查询和命令投递的通道诊断。
+真实主应用与 Finder Extension 的成功通信由[虚拟机日常验收](../../../Tests/Main.md)从菜单点击、配置更新及最终业务副作用共同确认。[集成 Sender](../../../Tests/EndToEnd/IPC/ContextCommandSender.swift)保留独立签名进程入口，用于配置查询和命令投递的通道诊断。
 
-[ContextCommandTransportTests](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift)仅保留 accept 一次资源耗尽后恢复、资源退避中停止/释放的清理，以及致命错误清理先于回调三项系统边界例外；失败模式和必要性见[单元测试例外](../../../Tests/UnitTestExceptions.md)。它们使用隔离端点与精确 accept 错误，不承担 wire 往返、正常身份或业务成功的验收。
+[ContextCommandTransportTests](../../../Tests/Unit/ECMenuTests/IPC/ContextCommandTransportTests.swift)仅保留 accept 一次资源耗尽后恢复、资源退避中停止/释放的清理，以及致命错误清理先于回调三项系统边界例外；失败模式和必要性见[单元测试例外](../../../Tests/Unit/Exceptions.md)。它们使用隔离端点与精确 accept 错误，不承担 wire 往返、正常身份或业务成功的验收。
 
 系统调用与运行态身份的既有项目观察适用版本以上文各段为准。错误身份、异常 ACK、截断与静默对端，仅在本轮报告实际执行相应独立进程场景时算作当前验证；入口存在或正常通信成功均不证明这些失败路径已通过。分布式通知的可靠性与业务完成仍属于各自边界。

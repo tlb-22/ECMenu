@@ -1,6 +1,6 @@
 # 本机开发入口的用户焦点恢复
 
-本机手动开发和环境切换入口在结束时请求恢复启动前的应用焦点；`run-debug.sh` 与 `activate-environment.sh` 共用此边界。`preview-ui.sh` 用于留下可交互的前台窗口。默认验收在一次性虚拟机中运行，宿主只编排与收集产物，不需要通过焦点恢复保护开发桌面；流程见[测试定义](../../Tests/Main.md)。
+本机手动开发和环境切换入口在结束时请求恢复启动前的应用焦点；`run-debug.sh` 与 `activate-environment.sh` 共用此边界。`preview-ui.sh` 用于留下可交互的前台窗口。默认验收在一次性虚拟机中运行，宿主只编排与收集产物，不需要通过焦点恢复保护开发桌面；流程见[测试定义](../../Tests/Main.md)。恢复工具归属 `scripts/lib/UserFocusRestoration/`，编译工具和模块缓存位于本轮 `.artifacts/scratch/probes/`，诊断日志位于 `.artifacts/scratch/logs/`。
 
 ## 稳定路径
 
@@ -15,8 +15,8 @@
 | 职责模块 | 核心类型或脚本与源码入口 | 输入、输出与状态所有权 |
 |---|---|---|
 | 手动开发恢复会话 | [user-focus.sh](../../scripts/lib/user-focus.sh) 接入，[with-user-focus-restored.sh](../../scripts/lib/with-user-focus-restored.sh) 执行包装 | 手动开发命令 → 捕获原焦点、运行子进程组、等待清理后恢复；包装器持有本轮身份快照、子进程、会话标记和原退出码，通过 `trap` / `kill` / `wait` 转发信号并等待退出 |
-| 运行进程与系统激活 | `UserFocusRestorer` · [UserFocusRestorer.swift](../../Tests/UserFocusRestoration/Support/UserFocusRestorer.swift) | `capture` / `restore` / `launch` 参数 → 编码身份、恢复状态或新命令进程；`NSWorkspace` 读取运行事实，`NSRunningApplication.activate` 请求激活并在主 RunLoop 核实结果，`setsid` / `execvp` 建立子命令会话 |
-| 恢复目标规则 | `UserFocusApplicationIdentity` / `UserFocusRestorationResolver` · [UserFocusRestorationModel.swift](../../Tests/UserFocusRestoration/Support/UserFocusRestorationModel.swift) | 原身份与当前候选身份 → 可恢复目标或不可用；纯值计算，无外部 I/O，由系统边界读取事实后调用 |
+| 运行进程与系统激活 | `UserFocusRestorer` · [UserFocusRestorer.swift](../../scripts/lib/UserFocusRestoration/Support/UserFocusRestorer.swift) | `capture` / `restore` / `launch` 参数 → 编码身份、恢复状态或新命令进程；`NSWorkspace` 读取运行事实，`NSRunningApplication.activate` 请求激活并在主 RunLoop 核实结果，`setsid` / `execvp` 建立子命令会话 |
+| 恢复目标规则 | `UserFocusApplicationIdentity` / `UserFocusRestorationResolver` · [UserFocusRestorationModel.swift](../../scripts/lib/UserFocusRestoration/Support/UserFocusRestorationModel.swift) | 原身份与当前候选身份 → 可恢复目标或不可用；纯值计算，无外部 I/O，由系统边界读取事实后调用 |
 
 这些支持文件属于本机手动开发入口。目标身份、退出状态与恢复结果记录在本次日志中；虚拟机验收不把恢复宿主焦点或保持宿主 Finder 窗口集合作为产品通过条件。
 

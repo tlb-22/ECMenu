@@ -280,7 +280,7 @@ def main():
     parser.add_argument("helper", type=Path)
     parser.add_argument("output_directory", type=Path)
     args = parser.parse_args()
-    project = Path(__file__).resolve().parents[2]
+    project = Path(__file__).resolve().parents[3]
     output = args.output_directory.resolve()
     report = {"version": 1, "status": "running", "steps": [],
               "administratorAuthenticationRequested": False, "authenticationInProgress": False}

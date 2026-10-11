@@ -1,6 +1,6 @@
 #!/bin/zsh
 
-# 包装 GUI 自动化命令，记录原前台应用并在正常结束或中断后恢复焦点。
+# 包装本机手动开发命令，记录原前台应用并在正常结束或中断后恢复焦点。
 # 构建独立恢复工具，管理子进程会话和信号清理，保留恢复诊断。
 
 set -euo pipefail
@@ -11,13 +11,13 @@ readonly script_directory="${script_path:h}"
 readonly project_root="${script_directory:h:h}"
 readonly run_timestamp="$(date '+%Y%m%d-%H%M%S')"
 readonly run_name="$run_timestamp-user-focus-$$"
-readonly test_directory="$project_root/.artifacts/scratch/tests/$run_name"
+readonly probe_directory="$project_root/.artifacts/scratch/probes/$run_name"
 readonly log_directory="$project_root/.artifacts/scratch/logs/$run_name"
 readonly build_log="$log_directory/build.log"
 readonly focus_log="$log_directory/focus.log"
-readonly model_source="$project_root/Tests/UserFocusRestoration/Support/UserFocusRestorationModel.swift"
-readonly restorer_source="$project_root/Tests/UserFocusRestoration/Support/UserFocusRestorer.swift"
-readonly restorer="$test_directory/UserFocusRestorer"
+readonly model_source="$project_root/scripts/lib/UserFocusRestoration/Support/UserFocusRestorationModel.swift"
+readonly restorer_source="$project_root/scripts/lib/UserFocusRestoration/Support/UserFocusRestorer.swift"
+readonly restorer="$probe_directory/UserFocusRestorer"
 readonly developer_directory="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 
 if (( $# == 0 )); then
@@ -28,9 +28,9 @@ if [[ -n "${ECMENU_USER_FOCUS_SESSION:-}" ]]; then
     exec "$@"
 fi
 
-mkdir -p "$test_directory/module-cache" "$log_directory"
+mkdir -p "$probe_directory/module-cache" "$log_directory"
 if DEVELOPER_DIR="$developer_directory" xcrun swiftc \
-    -module-cache-path "$test_directory/module-cache" \
+    -module-cache-path "$probe_directory/module-cache" \
     "$model_source" \
     "$restorer_source" \
     -framework AppKit \

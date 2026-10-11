@@ -44,7 +44,7 @@ def main():
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     require_guest()
-    project = Path(__file__).resolve().parents[2]
+    project = Path(__file__).resolve().parents[3]
     output = args.output.resolve()
     if not output.is_relative_to(project / ".artifacts/scratch/tests"):
         raise RuntimeError("应用设置回执必须位于来宾项目 scratch/tests 内")

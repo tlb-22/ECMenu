@@ -40,7 +40,6 @@ private enum READMEStatusPagePreviewState {
             fileTemplateState: .ready([
                 try! FileTemplate(displayName: "TXT", defaultFileName: "untitled.txt"),
                 try! FileTemplate(displayName: "Markdown", defaultFileName: "untitled.md"),
-                try! FileTemplate(displayName: "Word", defaultFileName: "untitled.docx"),
             ])
         )
     }

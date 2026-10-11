@@ -68,17 +68,17 @@ sequenceDiagram
 
 | 职责模块 | 核心类型 / 实现 | 源码入口 | 输入、输出与状态 / API |
 |---|---|---|---|
-| 命令行与进程装配 | `CLICommand`、`FinderMenuAutomationMain` | [命令解析](../../Tests/FinderMenuCapture/FinderMenuAutomationCommand.swift)、[程序入口](../../Tests/FinderMenuCapture/FinderMenuAutomation.swift) | 参数 → 类型化操作；连接通用捕获与能力验收，通过 `FileHandle.standardOutput` 输出带 Base64 字段的记录，以退出码表示整次操作结果 |
-| 通用捕获输入 | `FinderMenuCaptureInput` | [输入校验](../../Tests/FinderMenuCapture/Support/FinderMenuCaptureInput.swift) | 路径参数 → 输出 URL 与合法上下文；`FileManager` 检查 fixture、同目录选择和未占用的 PNG 输出路径，失败发生在 UI 操作前 |
-| 目录定位诊断 | `FinderNavigationEvidence` | [失败证据](../../Tests/FinderMenuCapture/Support/FinderNavigationEvidence.swift) | 定位失败 → 窗口身份、预期文件 URL 和实际 AX 树；仅记录现场，不改变界面或原始失败 |
-| 权限边界 | `PermissionReport` | [权限查询](../../Tests/FinderMenuCapture/Support/FinderAutomationPermissions.swift) | 查询 / 显式授权请求 → AX 与屏幕录制事实；`AXIsProcessTrusted`、`AXIsProcessTrustedWithOptions`、`CGPreflightScreenCaptureAccess`、`CGRequestScreenCaptureAccess`；仅 preflight 可以请求授权 |
-| 通用菜单会话 | `FinderMenuSession`、`AXClient`、输入与窗口适配 | [会话](../../Tests/FinderMenuCapture/Support/FinderMenuSession.swift)、[AX 操作](../../Tests/FinderMenuCapture/Support/FinderAccessibility.swift)、[键盘](../../Tests/FinderMenuCapture/Support/FinderKeyboard.swift)、[指针](../../Tests/FinderMenuCapture/Support/FinderPointer.swift)、[窗口清点](../../Tests/FinderMenuCapture/Support/FinderWindowInventory.swift) | 上下文 → 已验证菜单快照、点击及选择事实；会话唯一持有 AX 对象和清理状态。AppKit 激活、AX 观察/动作、CGEvent 输入的约束见下方平台契约与稳定协议 |
-| 图像捕获 | `MenuScreenshot`、`WindowImageInput` | [截图实现](../../Tests/FinderMenuCapture/Support/MenuScreenshot.swift)、[窗口输入](../../Tests/FinderMenuCapture/Support/WindowImageInput.swift) | 一个或父子两个菜单快照、或 Preview 就绪窗口编号 → PNG / 错误；ScreenCaptureKit 匹配窗口并捕获、ImageIO 编码，完成后仍由调用者复核菜单或 Preview 焦点 |
-| 新建文件验收 | `NewFileMenuAcceptance` | [验收请求与执行](../../Tests/FinderMenuCapture/Features/NewFile/NewFileMenuAcceptance.swift) | 模板标题、预期文件名、独立预期字节与 fixture → 实际文件字节一致且被选中 / 明确失败；复用通用截图与会话点击，文件读取与 AX 选择观察在有界等待内验证结果 |
-| 通用值与失败 | `FinderMenuContext`、`MenuSnapshot`、`AutomationFailure` | [共享值](../../Tests/FinderMenuCapture/Support/FinderMenuCaptureTypes.swift) | 不可变上下文、菜单几何和标题、失败及等待策略；无权限请求或具体产品命令逻辑 |
-| 场景与语言编排 | shell Composition、各 Context / Feature、语言注册表 | [场景装配](../../Tests/FinderMenuCapture/FinderMenuCaptureComposition.sh)、[新建文件场景](../../Tests/FinderMenuCapture/Features/NewFile/NewFileCaptureExpectations.sh)、[语言定义](../../Tests/FinderMenuCapture/Languages/CaptureLanguages.sh)、[脚本入口](../../scripts/capture-finder-menus.sh) | 场景 / 语言 → fixture、独立菜单标题期望与串行捕获；在一次性 guest 设置当前 Debug 和 Finder 的语言，具体能力期望归各自 Feature |
+| 命令行与进程装配 | `CLICommand`、`FinderMenuAutomationMain` | [命令解析](../../Tests/EndToEnd/Desktop/FinderMenuAutomationCommand.swift)、[程序入口](../../Tests/EndToEnd/Desktop/FinderMenuAutomation.swift) | 参数 → 类型化操作；连接通用捕获与能力验收，通过 `FileHandle.standardOutput` 输出带 Base64 字段的记录，以退出码表示整次操作结果 |
+| 通用捕获输入 | `FinderMenuCaptureInput` | [输入校验](../../Tests/EndToEnd/Desktop/Support/FinderMenuCaptureInput.swift) | 路径参数 → 输出 URL 与合法上下文；`FileManager` 检查 fixture、同目录选择和未占用的 PNG 输出路径，失败发生在 UI 操作前 |
+| 目录定位诊断 | `FinderNavigationEvidence` | [失败证据](../../Tests/EndToEnd/Desktop/Support/FinderNavigationEvidence.swift) | 定位失败 → 窗口身份、预期文件 URL 和实际 AX 树；仅记录现场，不改变界面或原始失败 |
+| 权限边界 | `PermissionReport` | [权限查询](../../Tests/EndToEnd/Desktop/Support/FinderAutomationPermissions.swift) | 查询 / 显式授权请求 → AX 与屏幕录制事实；`AXIsProcessTrusted`、`AXIsProcessTrustedWithOptions`、`CGPreflightScreenCaptureAccess`、`CGRequestScreenCaptureAccess`；仅 preflight 可以请求授权 |
+| 通用菜单会话 | `FinderMenuSession`、`AXClient`、输入与窗口适配 | [会话](../../Tests/EndToEnd/Desktop/Support/FinderMenuSession.swift)、[AX 操作](../../Tests/EndToEnd/Desktop/Support/FinderAccessibility.swift)、[键盘](../../Tests/EndToEnd/Desktop/Support/FinderKeyboard.swift)、[指针](../../Tests/EndToEnd/Desktop/Support/FinderPointer.swift)、[窗口清点](../../Tests/EndToEnd/Desktop/Support/FinderWindowInventory.swift) | 上下文 → 已验证菜单快照、点击及选择事实；会话唯一持有 AX 对象和清理状态。AppKit 激活、AX 观察/动作、CGEvent 输入的约束见下方平台契约与稳定协议 |
+| 图像捕获 | `MenuScreenshot`、`WindowImageInput` | [截图实现](../../Tests/EndToEnd/Desktop/Support/MenuScreenshot.swift)、[窗口输入](../../Tests/EndToEnd/Desktop/Support/WindowImageInput.swift) | 一个或父子两个菜单快照、或 Preview 就绪窗口编号 → PNG / 错误；ScreenCaptureKit 匹配窗口并捕获、ImageIO 编码，完成后仍由调用者复核菜单或 Preview 焦点 |
+| 新建文件验收 | `NewFileMenuAcceptance` | [验收请求与执行](../../Tests/EndToEnd/Desktop/Features/NewFile/NewFileMenuAcceptance.swift) | 模板标题、预期文件名、独立预期字节与 fixture → 实际文件字节一致且被选中 / 明确失败；复用通用截图与会话点击，文件读取与 AX 选择观察在有界等待内验证结果 |
+| 通用值与失败 | `FinderMenuContext`、`MenuSnapshot`、`AutomationFailure` | [共享值](../../Tests/EndToEnd/Desktop/Support/FinderMenuCaptureTypes.swift) | 不可变上下文、菜单几何和标题、失败及等待策略；无权限请求或具体产品命令逻辑 |
+| 场景与语言编排 | shell Composition、各 Context / Feature、语言注册表 | [场景装配](../../Tests/EndToEnd/Desktop/FinderMenuCaptureComposition.sh)、[新建文件场景](../../Tests/EndToEnd/Desktop/Features/NewFile/NewFileCaptureExpectations.sh)、[语言定义](../../Tests/EndToEnd/Desktop/Languages/CaptureLanguages.sh)、[脚本入口](../../scripts/capture-finder-menus.sh) | 场景 / 语言 → fixture、独立菜单标题期望与串行捕获；在一次性 guest 设置当前 Debug 和 Finder 的语言，具体能力期望归各自 Feature |
 
-工具 target 的文件系统同步组覆盖 `Tests/FinderMenuCapture/` 中的 Swift 实现，shell 定义由脚本加载并从 target 成员中排除。输入验证、权限与会话属于开发工具，产品实现仍由各业务 spec 描述。
+工具 target 的文件系统同步组覆盖 `Tests/EndToEnd/Desktop/` 中的 Swift 实现，shell 定义由脚本加载并从 target 成员中排除。输入验证、权限与会话属于开发工具，产品实现仍由各业务 spec 描述。
 
 ## 已排除的方案
 
@@ -151,9 +151,11 @@ macOS 或 Xcode 升级后，至少重新验证 Finder 的 AX 树、激活时的�
 
 真实 Finder 场景在已解锁的 guest 桌面串行执行，整轮由宿主 VM 运行锁管理；所有权、焦点、选择或菜单发生变化时，本次截图失败。
 
+子菜单准备在既有等待期限内重新枚举父项的直接 AX 子菜单，读取稳定快照，并核对窗口服务器公布的可见窗口。只有 Finder PID、屏幕可见性与矩形唯一对应才推进；尚未对应时继续读取当前事实，歧义与 API 错误直接失败。截图后仍核对来源选择及父子菜单快照。macOS 26.6.2 的失败现场曾记录 AX 快照矩形与已可见的子菜单窗口不一致；冻结 AX 快照后只刷新窗口列表无法处理这一观察边界。当前准备以两侧事实的一致性表达就绪。
+
 产品桌面流程通过 Launch Services 请求打开或重新打开应用，等待实际配置窗口可见且应用位于前台后才开始下一段 Finder 操作。进程出现不能证明窗口已经完成启动；macOS 26.6.2 的来宾观察中，过早开始 Finder 操作会与随后显示的配置窗口竞争焦点。原生列表拖动按目标 AX 行边界定位落点，保留拖动中的插入反馈截图，释放鼠标后再核对持久化和新菜单结果。
 
-总开关关闭的菜单验收通过 [observeAbsentItems](../../Tests/FinderMenuCapture/Support/FinderMenuSession.swift) 观察完整 `AutomationTiming.menu` 有界窗口，在每次观察中复核来源选择、菜单身份及全部 ECMenu 命令持续缺席，结束后才保存结果。单次原生菜单快照可能早于 Extension 填充；持续缺席检查与前后启用状态的真实菜单检查共同构成该场景证据。此预算是测试完成边界，不是系统异步菜单或配置通知的到达时间保证。
+总开关关闭的菜单验收通过 [observeAbsentItems](../../Tests/EndToEnd/Desktop/Support/FinderMenuSession.swift) 观察完整 `AutomationTiming.menu` 有界窗口，在每次观察中复核来源选择、菜单身份及全部 ECMenu 命令持续缺席，结束后才保存结果。单次原生菜单快照可能早于 Extension 填充；持续缺席检查与前后启用状态的真实菜单检查共同构成该场景证据。此预算是测试完成边界，不是系统异步菜单或配置通知的到达时间保证。
 
 2026-10-11 在 macOS 26.6.2（25G83）、Xcode 27.0（27A266a）的 guest 中观察到，同一文件的解析节点与 `AXSelectedChildren` 返回对象位于不同 AX 层级，分别为 `AXList` 与 `AXGroup`，文件 URL 一致；多图片视图的可设置选择容器与文件节点之间还存在一层包含全部项目的 `AXList`。项目的命中范围按唯一文件 URL 的子树解析，不能假设每个文件都是选择容器的直接子节点。AX 对象相等不能作为文件选择相等的判据；窗口及菜单所有权仍按 AX 对象验证。
 
@@ -169,12 +171,12 @@ macOS 或 Xcode 升级后，至少重新验证 Finder 的 AX 树、激活时的�
 
 执行成功须同时观察到普通文件生成、字节与独立输入一致以及 Finder 选中新文件，随后才关闭本轮认领的窗口，避免结果选择仍在处理时提前关闭来源窗口。成功与失败均沿用 session 的菜单、sheet 和窗口清理；只操作本轮精确认领的 AX 对象。该入口按显示名定位测试目标，因此要求当前验收叶子名称可唯一匹配；产品模板身份仍由稳定 ID 区分。
 
-README 捕获使用 `prepare-readme-templates <debug.app> <output-directory>` 在一次性 guest 中清理当前 Debug 模板状态，并通过真实设置页和原生文件选择器导入 Markdown 与有效 Word 文件，将显示名设置为 Markdown、Word。初始 TXT 连同两个导入项按 TXT、Markdown、Word 保持顺序；准备完成后检查对应默认文件名并保存输入、索引与设置页 PNG，再执行真实 Finder 子菜单捕获。调用方通过重复的 `--expect-template <title>` 参数独立指定三行顺序，脚本核对两种语言下实际 `SUBITEM` 输出。定义位于 [README 模板 fixture](../../Tests/FinderMenuCapture/Desktop/ReadmeTemplateFixture.swift)。
+README 捕获使用 `prepare-readme-templates <debug.app> <output-directory>` 在一次性 guest 中清理当前 Debug 模板状态，并通过真实设置页和原生文件选择器导入 Markdown 文件并设置显示名。初始 TXT 与导入项按 TXT、Markdown 保持顺序；准备完成后检查对应默认文件名并保存输入、索引与设置页 PNG，再执行真实 Finder 子菜单捕获。调用方通过重复的 `--expect-template <title>` 参数独立指定两行顺序，脚本核对两种语言下实际 `SUBITEM` 输出。定义位于 [README 模板 fixture](../../Tests/EndToEnd/Desktop/Acceptance/ReadmeTemplateFixture.swift)。
 
-2026-10-11 在 macOS 26.6.2（25G83）、Xcode 27.0（27A266a）的 guest 中，该流程完成真实设置页导入、索引与默认文件名检查，以及两种语言的 TXT、Markdown、Word 实际子菜单顺序检查。保存的 Word 输入为有效文档包，设置页和双语菜单 PNG 经人工检查；概览同步与运行收尾见[接入证据](Delivery/VirtualMachineTests.md#接入证据)。这些图片不代替新建文件字节和选择结果的产品验收。
+实际运行结果与版本化概览的检查范围见[接入证据](Delivery/VirtualMachineTests.md#接入证据)。这些图片不代替新建文件字节和选择结果的产品验收。
 
 ## 权限与 CI 边界
 
-helper 需要 Accessibility 来读取和操作 Finder，需要“屏幕与系统音频录制”来读取共享窗口；权限仅属于开发工具，不改变 ECMenu 产品本身的权限需求。helper 的固定应用身份见[构建身份](Delivery/BuildIdentity.md)：脚本在真实截图前分别核对应用包 Bundle ID、实际 Mach-O 的 code-signing identifier 和 Development Team，并验证应用包与可执行文件签名。桌面命令通过 [GUI launchd 入口](../../Tests/VirtualMachine/run-desktop-job.py) 作为独立作业启动，权限责任进程与项目模板预授权一致，详细协议见[虚拟机测试](Delivery/VirtualMachineTests.md)。
+helper 需要 Accessibility 来读取和操作 Finder，需要“屏幕与系统音频录制”来读取共享窗口；权限仅属于开发工具，不改变 ECMenu 产品本身的权限需求。helper 的固定应用身份见[构建身份](Delivery/BuildIdentity.md)：脚本在真实截图前分别核对应用包 Bundle ID、实际 Mach-O 的 code-signing identifier 和 Development Team，并验证应用包与可执行文件签名。桌面命令通过 [GUI launchd 入口](../../Tests/Infrastructure/VirtualMachine/run-desktop-job.py) 作为独立作业启动，权限责任进程与项目模板预授权一致，详细协议见[虚拟机测试](Delivery/VirtualMachineTests.md)。
 
-真实截图依赖 guest 的已解锁桌面、当前 Finder 进程、当前启用的 Debug Extension 和前台焦点。托管 CI 执行静态检查；日常完整测试由本机虚拟机入口自动执行真实桌面流程。`--check` 验证场景注册、fixture、双语命令 key、helper 编译和静态 TCC 身份配置，证据范围与真实截图分别记录。
+真实截图依赖 guest 的已解锁桌面、当前 Finder 进程、当前启用的 Debug Extension 和前台焦点。托管 CI 执行静态检查；完整测试由本机虚拟机入口自动执行真实桌面流程。`--check` 验证场景注册、fixture、双语命令 key、helper 编译和静态 TCC 身份配置，证据范围与真实截图分别记录。
