@@ -67,10 +67,12 @@ Common entry points:
 
 ```bash
 ./scripts/run-debug.sh
+./scripts/prepare-test-vm.sh
 ./scripts/test.sh
-./scripts/test-integration.sh
 ./scripts/build-release.sh
 ```
+
+Desktop tests run in disposable macOS virtual machines; prepare the project template before the first run. See [Test Coverage](Tests/Main.md) for requirements and evidence.
 
 See [Development Scripts](scripts/Main.md) for artifact locations and complete usage, and [Project Specifications](spec/Main.md) for product behavior and technical boundaries.
 

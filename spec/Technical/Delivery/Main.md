@@ -6,3 +6,5 @@
 - [应用图标](AppIcon.md)：macOS 图标合成契约、Xcode 交付入口和本机缓存边界。
 
 - [开发、验证与交付流程](DevelopmentWorkflow.md)：构建、进程登记、测试、预览与交付的控制流和工具 API 边界。
+
+- [虚拟机端到端测试](VirtualMachineTests.md)：独立桌面环境、项目预热与日常验收。

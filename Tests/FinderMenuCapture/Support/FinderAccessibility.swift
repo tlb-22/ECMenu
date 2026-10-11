@@ -228,12 +228,15 @@ enum AXTree {
             .map { (element: $0, ancestors: [root]) }
 
         while let node = pending.popLast() {
+            let children: [AXUIElement]
+            do {
+                children = try AXClient.elements(kAXChildrenAttribute as CFString, of: node.element)
+            } catch AutomationFailure.accessibility(.readAttribute, .invalidUIElement) {
+                // 树枚举期间销毁的节点已经不属于当前界面，继续读取其他仍存活的分支。
+                continue
+            }
             paths.append(AXPath(element: node.element, ancestors: node.ancestors))
             let ancestors = [node.element] + node.ancestors
-            let children = try AXClient.elements(
-                kAXChildrenAttribute as CFString,
-                of: node.element
-            )
             pending.append(contentsOf: children.reversed().map {
                 (element: $0, ancestors: ancestors)
             })

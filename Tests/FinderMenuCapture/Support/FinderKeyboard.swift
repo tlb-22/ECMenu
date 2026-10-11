@@ -31,6 +31,8 @@ enum FinderKeyboard {
         ) else {
             throw AutomationFailure.keyboardEventUnavailable
         }
+        keyDown.flags = []
+        keyUp.flags = []
         keyDown.post(tap: .cghidEventTap)
         keyUp.post(tap: .cghidEventTap)
     }

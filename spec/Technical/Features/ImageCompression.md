@@ -108,7 +108,9 @@ EXIF orientation `5...8` 会交换视觉宽高，因此最大宽度约束应用�
 
 新的 `CGImageDestination` 只接收重新绘制的位图和 JPEG 质量，不复制源属性字典。因此源 EXIF、GPS、XMP 和容器附加帧不会写入结果。
 
-项目在 macOS 26.6.1（25G76）使用 ImageIO 生成的样本验证了 JPEG 的 orientation `5...8` 像素方向、GIF 第一帧、HEIC 非首帧主图像，以及源相机、拍摄时间、GPS 和自定义 XMP 信息不进入输出。这些边界由 [ImageCompressionBoundaryTests](../../../Tests/ECMenuTests/Commands/ImageCompression/ImageCompressionBoundaryTests.swift) 覆盖；样本范围不代表所有系统支持的图片格式均已实测。
+ImageIO 可以为新图像生成描述属性。macOS 26.6.2 来宾的实际 JPEG 经 ImageIO 读取时，观察到 EXIF 色彩空间和输出像素尺寸，输入样本的用户注释与 GPS 坐标均不存在。自动验收先确认独立来源 fixture 含有真实 EXIF `UserComment` 和 GPS，再检查这些来源隐私信息没有进入输出；输出属性回执同时保存全部 EXIF 键，供检查平台行为。系统生成字段的具体集合不作为产品契约，EXIF 字典存在本身也不表示来源隐私信息被保留。
+
+项目在 macOS 26.6.1（25G76）使用 ImageIO 生成的样本验证了 JPEG 的 orientation `5...8` 像素方向、GIF 第一帧、HEIC 非首帧主图像，以及源相机、拍摄时间、GPS 和自定义 XMP 信息不进入输出。该样本观察保留为平台设计依据，不代表当前源码版本已重新验收，也不代表所有系统支持的图片格式均已实测。
 
 ## 输出落盘与文件时间
 
@@ -120,11 +122,6 @@ EXIF orientation `5...8` 会交换视觉宽高，因此最大宽度约束应用�
 
 ## 验证入口与证据范围
 
-| 验证入口 | 覆盖边界 |
-|---|---|
-| [ImageCompressionTests](../../../Tests/ECMenuTests/Commands/ImageCompression/ImageCompressionTests.swift) | 设置恢复、排序日期、真实转码、输出冲突、文件日期、白底以及首项完成后的协作取消 |
-| [ImageCompressionBoundaryTests](../../../Tests/ECMenuTests/Commands/ImageCompression/ImageCompressionBoundaryTests.swift) | 不可写目录与其他成功、源消失、EXIF 方向、GIF 首帧、HEIC 主图、元数据剥离 |
-| [ImageCompressionSettingsWindowTests](../../../Tests/ECMenuTests/Commands/ImageCompression/ImageCompressionSettingsWindowTests.swift) | 确认/关闭/Task 取消一次完成、提前取消不显示、并发窗口独立、同一实例多个确认的同步保存顺序 |
-| [ImageCompressionUseCaseTests](../../../Tests/ECMenuTests/Commands/ImageCompression/ImageCompressionUseCaseTests.swift) | 注入编码失败与日期失败时继续并保留输出；参数取消不调用图像/文件边界 |
+[虚拟机日常验收](../../../Tests/Main.md)从真实 Finder 图片选择进入参数窗口，分别取消和确认处理，检查 JPEG 尺寸、输出命名与元数据、既有目标内容以及源文件不变。真实权限失败和批量部分成功须以构造的来宾 fixture、最终输出和警告证据确认。
 
-上述测试定义既包含真实 ImageIO/文件操作，也包含可控失败注入；后者不等同于对应系统错误在实机上必然可复现。已有图像样本观察环境为 macOS 26.6.1（25G76），来源与范围见“主图像、方向与像素”。实机多窗口焦点和 Space 仍需通过真实用户交互验证，自动化窗口测试不替代该验收。完整运行入口见[命令执行](../Runtime/CommandExecution.md#验证入口)。
+方向、容器主图和元数据剥离的既有样本环境为 macOS 26.6.1（25G76），来源与范围见“主图像、方向与像素”。当前流程报告只对实际执行的图像样本和窗口交互作出结论；没有相应样本结果时不将这些平台观察算作当前验收通过。

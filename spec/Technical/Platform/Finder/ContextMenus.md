@@ -50,6 +50,6 @@ Finder 要求菜单 action 由 Extension principal object 提供（`FinderSync.h
 
 [命令执行边界](../../Runtime/CommandExecution.md)定义 Feature、Action 与 Handler 的身份关系。Finder 只消费每个已启用 Feature 提供的递归菜单值树；树可以包含叶子、子菜单和分隔线，规范化会删除空子菜单以及每层开头、结尾和连续的分隔线。
 
-文件权限和只读卷等不稳定条件不在菜单阶段预检，执行时仍可能失败。相关测试见 [ContextMenuCompositionTests](../../../../Tests/ECMenuFinderExtensionTests/Menu/ContextMenuCompositionTests.swift) 和 [ContextMenuLayoutTests](../../../../Tests/ECMenuFinderExtensionTests/Menu/ContextMenuLayoutTests.swift)。
+文件权限和只读卷等不稳定条件不在菜单阶段预检，执行时仍可能失败。[虚拟机日常验收](../../../../Tests/Main.md)从真实 Finder 上下文读取菜单结构、执行可用动作并核对最终副作用；菜单截图同时保留可检查的界面证据。
 
 平台升级后需要重新验证字段映射、连续构建多个菜单时的旧 action 快照，以及每层菜单树的叶子、空子菜单和分隔线规范化。

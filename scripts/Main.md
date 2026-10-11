@@ -1,220 +1,52 @@
 # 开发脚本
 
-脚本从自身位置解析项目根目录。`.derivedData/` 只作为 Xcode Derived Data；脚本日志、测试工作目录、临时探针和视觉检查分别写入 `.artifacts/scratch/{logs,tests,probes,previews}/`。scratch 中每次运行的文件或目录使用 `YYYYMMDD-HHMMSS-<purpose>-<pid>` 命名，可在没有相关任务运行时整体清理；需要重复执行的测试与界面预览保存在 `Tests/`，诊断入口保存在 `scripts/`。
+开发构建使用当前宿主桌面；自动端到端验收与截图使用一次性 macOS 虚拟机。脚本从自身位置定位仓库，构建缓存只位于 `.derivedData/`，可重建证据按用途位于 `.artifacts/scratch/{logs,tests,probes,previews}/YYYYMMDD-HHMMSS-<purpose>-<pid>`。
 
-正式发布产物写入 `.artifacts/releases/<version>+<build>/`，已有非空版本目录不得被静默覆盖。`design/AppIcon/output/Preview/` 是图标设计源包自己的可重建预览输出，不属于运行时 scratch。
+## 日常入口
 
-## 用户焦点恢复
+| 入口 | 用途与成功边界 |
+|---|---|
+| `./scripts/run-debug.sh` | 签名构建、运行当前 Debug 产物并核对主应用及 Extension 路径 |
+| `./scripts/run-debug.sh --refresh-finder` | 刷新当前 Debug Extension 登记与 Finder 进程 |
+| `./scripts/run-debug.sh --refresh-icon` | 刷新系统图标缓存与当前 Debug 登记 |
+| `./scripts/activate-environment.sh debug\|release` | 准备目标环境后切换 Finder Extension，失败恢复原启用状态 |
+| `python3 scripts/prepare-test-signing.py` | 一次性通过宿主钥匙串系统授权初始化签名来源，验证后保存到用户私有配置 |
+| `./scripts/prepare-test-vm.sh` | 从公共基线全新准备项目模板，安装应用与公开配置、准备权限和缓存，成功后事务替换 |
+| `./scripts/test.sh` | 在 guest 构建当前代码，执行真实桌面流程、双语菜单、签名 IPC 与 8 个故障注入例外，单独记录人工检查项 |
+| `python3 scripts/test-vm.py desktop` | 在一次性 guest 单独执行产品桌面流程，导出自动检查与待人工检查报告 |
+| `./scripts/test-integration.sh` | 在一次性 guest 运行独立签名 IPC 流程与实际文件结果检查 |
+| `./scripts/test-checks.sh` | 普通 CI 的构建、注册表、捕获定义与故障注入检查，覆盖范围独立报告 |
 
-会驱动主应用、Preview 或 Finder 的自动化入口在运行前记录当前前台应用，并在自身清理完成后将焦点交还给同一应用实例：`run-debug.sh`、`test.sh`、`test-integration.sh`、`activate-environment.sh`、`test-settings-reorder.sh`、`capture-previews.sh`、`capture-finder-menus.sh` 和 `capture-readme-images.sh`。嵌套调用只由最外层入口记录和恢复一次，因此 README 截图流程不会在中途被子脚本切回原应用。
+`run-debug.sh --build-only` 只构建并核对产品，`--no-build` 使用已构建产品，两者互斥。手动开发入口按当前产物的精确路径管理进程；Debug 与 Release 数据隔离，两个 Finder Extension 不得同时启用。手动启动与环境切换结束后恢复原前台应用，虚拟机流程无需宿主焦点或 Finder 窗口保护。
 
-普通应用退出后不会被脚本重新启动；Finder 因部分流程会主动重启，可恢复到身份唯一匹配的新 Finder 进程。没有前台应用的 CI 会话直接跳过恢复。`preview-ui.sh` 用于把可交互的 Preview 留在前台，不执行恢复。实现依据与 macOS Space 边界见[自动化脚本的用户焦点恢复](../spec/Technical/UserFocusRestoration.md)。
+## 视觉证据与交付
 
-## 测试期间的 Finder 窗口检查
+| 入口 | 用途 |
+|---|---|
+| `./scripts/preview-ui.sh <preview-id> [--language en\|zh-Hans]` | 在当前桌面留下可交互的独立预览；`--list` 列出场景 |
+| `./scripts/capture-previews.sh [<preview-id> ...]` | 在 guest 批量捕获双语固定预览，导出 PNG 和就绪记录 |
+| `./scripts/capture-finder-menus.sh` | 在 guest 捕获真实双语 Finder 菜单，导出标题检查和截图；`--check` 仅本地静态检查 |
+| `./scripts/capture-readme-images.sh` | 在 guest 合成中英文 README 图，成功后同步图片及引用到当前工作区 |
+| `python3 scripts/check-readme-images.py` | 检查版本化图片、README 引用和正式版本一致 |
+| `./scripts/generate-app-icon.sh --check` | 检查图标生成资源一致 |
+| `./scripts/build-release.sh` | 创建 Archive、版本 ZIP 和 SHA256SUMS，拒绝覆盖非空版本目录 |
 
-`test.sh` 与 `test-integration.sh` 在开始时记录 Finder 普通窗口的 ID 集合，在测试清理和焦点恢复全部结束后重新读取；新增、丢失或等量替换窗口都会使测试失败。最小化及非屏幕上的窗口也参与比较，窗口前后顺序不影响结果。成功、失败以及 HUP、INT、TERM 中断均执行检查，原测试已经失败时保留其退出码。嵌套测试只由最外层检查一次。
+截图可人工检查，当前没有图像断言。外部应用流程保存真实 ECMenu 菜单操作、应用版本、独立目标清单与全部可见窗口截图；目标内容和终端工作目录由人工检查。自动阶段完成且存在人工项时，桌面及虚拟机报告为 `review-pending`，流程退出 0；执行、导出或清理失败仍非零退出。独立 Preview 的内存状态用于视觉证据，产品功能通过实际应用与 Finder 流程验收。正式产物位于 `.artifacts/releases/<version>+<build>/`；当前发布采用 Apple Development 签名，不执行公证和网络发布。
 
-检查只读取窗口元数据，无需辅助功能或屏幕录制授权，也不会自动关闭窗口。没有 GUI 会话时明确跳过；运行期间手动开关 Finder 窗口也会形成差异。前后快照保存在 `.artifacts/scratch/tests/YYYYMMDD-HHMMSS-finder-windows-<pid>/`，对应日志保存在 `scratch/logs/` 的同名目录。纯窗口比较及退出路径测试分别位于 `Tests/FinderWindowPreservation/` 与 `Tests/DevelopmentScripts/`。检查范围与平台依据见 [Finder 窗口保持](../spec/Technical/FinderWindowPreservation.md)。
+README 捕获在 guest 中通过真实模板管理页准备 TXT、Markdown、Word，默认文件名为 `untitled.txt`、`untitled.md`、`untitled.docx`，再拍摄真实 Finder 子菜单；重复 `--expect-template <title>` 参数提供独立的实际模板行顺序期望。fixture 输入、已提交索引、设置页截图和子菜单行回执随本轮证据导出。
 
-## 构建与运行
+显式新建文件验收使用 `FinderMenuAutomation create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file>`，只有实际文件字节与独立预期一致、且 Finder 选中新文件才通过。批量产品流程由 `desktop-suite <debug.app> <output-directory>` 执行；README 的三模板准备由 `prepare-readme-templates <debug.app> <output-directory>` 执行。桌面命令限定在 guest，权限与启动责任进程遵循虚拟机协议。
 
-```bash
-./scripts/run-debug.sh
-```
+桌面工具经 `python3 Tests/VirtualMachine/run-desktop-job.py [--timeout <seconds>] <new-result-directory> -- <absolute-executable> [arguments...]` 作为 GUI launchd 的直接子进程启动，保存输出与退出码。Preview 的 `window-image <window-id> <output.png>` 复用同一已授权的原生工具进行窗口截图；日常 `permissions` 只查询，项目模板通过系统设置添加并授权实际应用，再由新进程核对授权结果。
 
-该命令执行签名 Debug 构建，只结束该构建产物精确路径上的旧主应用，运行 `.derivedData/Build/Products/Debug/ECMenu(Debug).app`，并验证主应用和 Finder Extension 进程。脚本从 Xcode build settings、构建后的 Info.plist 与代码签名解析产品路径和 Debug 身份，不按写死的产品名或进程名操作，因此不会结束已安装的 Release 主应用。
+模板准备与每轮克隆使用 `prepare-capture <output.png>` 实际捕获系统设置窗口，检查驱动的额外系统录屏提示。原生准备只批准 Apple 签名进程中明确指向当前驱动的已识别提示，保留 PNG 和公开授权结果；完成后关闭系统设置，产品验收随后开始。
 
-环境切换分两阶段复用此入口：`--build-only` 只构建并验证产品身份与签名；`--no-build` 使用现有产品，重新验证身份与签名后执行运行步骤。两者互斥，`--build-only` 单独使用。日常构建与运行使用默认模式。
+## 导航
 
-应用图标变化而程序坞仍显示旧缓存时使用：
+- [测试定义与覆盖](../Tests/Main.md)：真实流程、外部结果与单测例外。
+- [虚拟机执行协议](../spec/Technical/Delivery/VirtualMachineTests.md)：模板、缓存、管理员与签名凭据、结果导出和失败清理。
+- [开发、验证与交付流程](../spec/Technical/Delivery/DevelopmentWorkflow.md)：模块与工具 API 边界。
+- [构建身份](../spec/Technical/Delivery/BuildIdentity.md)：产品及测试的 Team、Bundle ID、App Group 与签名。
+- [独立预览](../spec/Technical/PreviewTarget.md)与[菜单捕获](../spec/Technical/FinderMenuCapture.md)：可重复视觉定义及平台条件。
 
-```bash
-./scripts/run-debug.sh --refresh-icon
-```
-
-该模式注销当前 Debug 应用，结束用户级 IconServices 与程序坞，删除可重建的用户级图标缓存，再登记当前应用和 Finder Extension，并打开项目目录触发 Extension 按需加载。它不保留缓存备份，也不重启 Finder；只在图标变化且普通重开仍显示旧图时使用。
-
-Finder Extension 源码变化、菜单消失或扩展没有加载时使用：
-
-```bash
-./scripts/run-debug.sh --refresh-finder
-```
-
-该模式先登记当前 Debug 应用与扩展，再移除同一 Extension 身份的其他旧路径及其父应用登记，保留并启用当前路径；随后只按当前 Debug Extension 的精确可执行路径结束旧进程，通过 Finder 的用户级 launchd service 重启 Finder，并打开项目目录触发加载。脚本不会注销、停用或结束不同身份的 Release 版本；若发现同一产品的另一 Finder Extension 身份仍处于启用状态，会在改变任何非 Debug 登记前停止并要求先在系统设置中明确停用，避免两个扩展同时贡献重复菜单。脚本在等待进程前验证 Debug 登记唯一性，并为 Finder 冷启动保留 15 秒加载时间。内部截图流程会同时传入 `--no-open-finder-window`，跳过项目目录窗口。
-
-## 完整测试
-
-```bash
-./scripts/test.sh
-```
-
-成功时输出通过数量，并验证独立 Preview target 可编译、声明式注册表可列出。完整日志写入 `.artifacts/scratch/logs/` 中带时间的单次文件；测试 result bundle 位于 `.artifacts/scratch/tests/YYYYMMDD-HHMMSS-xctest-<pid>/ECMenu.xcresult`，其他测试 fixture 也只存在于对应的单次目录。失败时脚本输出对应日志尾部。
-
-环境切换测试位于 `Tests/DevelopmentScripts/`：在项目内隔离目录运行生产切换脚本，以外部命令替身验证准备失败、状态查询失败、激活失败、信号中断和恢复失败的处理顺序，不改变系统登记或启用状态。测试命令路径只包含隔离替身与 macOS 系统目录，Python 替身使用当前测试解释器。
-
-## 跨进程集成测试
-
-```bash
-./scripts/test-integration.sh
-```
-
-该脚本先通过 `run-debug.sh --build-only` 准备并验证当前签名 Debug 产品，再构建产品 bundle identifier 为 `com.axiomace.ecmenu.test.ipcsender` 的 `ContextCommandSender`。该本地 helper 使用真实 Apple Development 签名，并有意把代码签名 identifier 覆盖为当前 Finder Extension 身份，同时声明共同 App Group entitlement。脚本从实际构建的 Debug Extension 派生 Team 与 identifier，核对其 Info.plist、代码签名和 helper 身份一致。
-
-验证准备完成后，脚本按当前 Debug 主应用的精确可执行路径停止旧进程并等待退出，再普通打开当前应用、确认进程运行。只读配置查询在五秒总预算内等待新宿主就绪；仅连接端点不存在或没有监听者时重试，身份不符和其他失败立即终止。随后向 scratch 中的一个普通名文件单次发送隐藏命令，读取实际文件 flags，确认 `UF_HIDDEN` 已设置；命令不重试。测试工作目录位于 `.artifacts/scratch/tests/`，完整输出位于 `.artifacts/scratch/logs/`；两者均按单次运行命名。
-
-跨进程验证不刷新 Finder，也不操作 Finder 窗口。真实 Finder 菜单、Extension 加载与点击链路属于独立的运行验收，使用 `run-debug.sh --refresh-finder` 及下列人工步骤验证。Finder host 的 URL 打开入口不属于主应用冷启动恢复保证。
-
-## Release 构建
-
-发布前依次执行 README 图片版本检查、图标一致性检查、完整测试和跨进程集成测试：
-
-```bash
-python3 scripts/check-readme-images.py
-./scripts/generate-app-icon.sh --check
-./scripts/test.sh
-./scripts/test-integration.sh
-```
-
-随后构建当前 Xcode Release configuration：
-
-```bash
-./scripts/build-release.sh
-```
-
-该脚本从 Xcode build settings 读取版本、build、产品名和签名配置，使用 generic macOS destination 创建 Archive，并拒绝覆盖非空的 `.artifacts/releases/<version>+<build>/`。正式目录保存 `ECMenu.xcarchive`、包含完整应用 bundle 的版本化 ZIP 与 `SHA256SUMS`；Archive 保留主应用和 Finder Extension 的 dSYM。完整构建日志与解压复验工作目录仍分别位于 `.artifacts/scratch/logs/` 和 `.artifacts/scratch/probes/`。
-
-脚本验证主应用与 Finder Extension 的版本、Bundle/signing identifier、Team、App Group、sandbox entitlement、代码签名和 dSYM UUID，并在 ZIP 解压后再次验证签名。当前发布边界固定为 Personal Team 的 Apple Development 签名，不执行 Developer ID export、公证、staple 或 `spctl` 放行检查；首次运行仍由用户按 macOS 界面手动放行。
-
-Archive 和打包不改变本机的 Extension 启用状态。Debug 与 Release 的应用、登记、偏好和 IPC 可以同时存在，但两个 Finder Extension 不得同时启用。安装版已经位于 `/Applications` 后，使用以下命令切换当前 Finder 环境：
-
-```bash
-./scripts/activate-environment.sh debug
-./scripts/activate-environment.sh release
-```
-
-脚本先完成目标准备：Debug 构建并验证产品，Release 定位并验证 `/Applications` 中的安装版；准备失败保留现有启用状态。随后记录两个身份的启用状态，先停用另一身份，再登记并启用目标身份，通过 Finder 的用户级 launchd service 重启 Finder，验证登记与运行路径。Debug 激活复用已准备的构建产品，Release 使用安装版；两者都先登记目标路径，再清理同身份的其他旧路径，使清理失败时目标仍有可启用的登记。
-
-切换失败或收到 HUP、INT、TERM 时，脚本先停用原本未启用的身份，再恢复原本启用的身份，并重启 Finder。恢复启用状态不撤销已经完成的目标构建或登记更新；恢复失败会明确报告并保留失败日志。两套主应用不因切换而互相退出，脚本不注销非目标身份或删除其数据。
-
-真正的首次安装验收在没有登记过 ECMenu 的新 macOS 用户或虚拟机中进行：解压 ZIP、放入 `/Applications`、手动放行并启用 Release Finder Extension，再验证 IPC、登录项、完全磁盘访问、六类命令和卸载边界。这样不会为了 clean-room 验收破坏日常开发账号中的 Debug 环境。
-
-## 生命周期人工验收
-
-先使用 `./scripts/run-debug.sh --refresh-finder` 启动当前 Debug 版本，再完成以下检查：
-
-1. 最小化状态页，确认配置会话仍保持打开，应用仍在程序坞中；随后恢复窗口。
-2. 点击状态页关闭按钮，确认状态页和程序坞图标消失，而主应用进程与 Finder Extension 进程仍在运行；在 Finder 执行命令并确认成功。
-3. 再次普通打开应用，在状态页按 `Command-W`，确认状态页和程序坞图标消失，而主应用进程仍在运行；在 Finder 执行命令并确认成功。
-4. 再次普通打开应用，选择 `Command-Q`，确认状态页和程序坞图标消失，而主应用进程仍在运行；在 Finder 执行命令并确认成功。
-5. 在配置会话关闭时执行无界面命令，以及需要参数、错误反馈或进度的命令，确认只出现必要的业务窗口，程序坞图标不出现。
-6. 再次普通打开应用，确认复用现有进程、只显示一个状态页，并重新出现在程序坞中。
-7. 强制结束主应用进程后触发命令，确认菜单仍可由 Extension 显示，但命令不执行并播放系统默认错误提示音；重新打开应用后确认命令恢复。
-8. 在系统未登记本应用登录项时打开“通用”，确认“登录时打开”默认关闭；开启后，系统已批准时不显示额外状态文字，需要批准时保持开关开启并显示灰色“未批准”。从系统设置返回应用后，确认状态自动刷新。
-9. 获得系统批准后，让主应用保持运行并注销、重新登录；确认系统不会恢复上次配置会话，主应用只作为后台命令宿主启动，状态页和程序坞图标均不出现。在 Finder 执行命令并确认成功；随后普通打开应用，确认仍复用该进程并只显示一个状态页。
-10. 关闭“登录时打开”，确认当前命令宿主不退出，并确认下一次登录不再自动启动主应用。
-
-## 界面预览
-
-```bash
-./scripts/preview-ui.sh status-page-general
-./scripts/preview-ui.sh status-page-context-menu
-./scripts/preview-ui.sh status-page-file-templates
-./scripts/preview-ui.sh status-page-file-templates-empty
-./scripts/preview-ui.sh status-page-file-templates-failure
-./scripts/preview-ui.sh readme-status-page-general
-./scripts/preview-ui.sh readme-status-page-context-menu
-./scripts/preview-ui.sh readme-status-page-file-templates
-./scripts/preview-ui.sh image-compression-settings
-./scripts/preview-ui.sh image-compression-settings-validation-error
-./scripts/preview-ui.sh context-command-progress-single
-./scripts/preview-ui.sh context-command-progress-multiple
-./scripts/preview-ui.sh status-page-general --language en
-./scripts/preview-ui.sh status-page-general --language zh-Hans
-./scripts/preview-ui.sh --list
-```
-
-该命令构建并启动独立的 `ECMenuPreviews` macOS 应用。各入口固定呈现设置页状态覆盖、文件模板列表、README 正常设置、压缩设置正常与验证错误、单任务与多任务进度；它们复用生产界面，不写入图片或持久化设置，也不执行右键命令。普通状态覆盖场景只注入合成状态；README 场景保持所有开关开启，并额外从 Launch Services 只读 Visual Studio Code 与 iTerm2 的真实图标，任一应用未安装时不会使用占位图标。`--language en` 与 `--language zh-Hans` 通过当前预览进程的 `AppleLanguages` 参数检查对应语言；省略参数时跟随系统语言。`--list` 仍只列出可用 Preview ID。
-
-文件模板预览使用内存样例：`status-page-file-templates` 呈现模板列表，`status-page-file-templates-empty` 呈现有效空清单，`status-page-file-templates-failure` 呈现读取失败与重试入口。预览中的导入、原地编辑名称和删除只改变会话内状态，打开和更换不访问外部应用或文件。
-
-预览代码位于 `Tests/ECMenuPreviews/`，每个 Case 在文件开头集中保存任务数量等可调参数，并由声明式 Composition 统一注册。
-
-`preview-ui.sh` 只替换独立预览进程，不结束主应用或刷新 Finder Extension；日常主应用运行继续使用 `run-debug.sh`。Xcode 构建产物保存在 `.derivedData/`，完整构建日志位于 `.artifacts/scratch/logs/`；临时截图或视觉检查结果位于 `.artifacts/scratch/previews/`。
-
-设置列表的真实鼠标检查使用以下入口：
-
-```text
-./scripts/test-settings-reorder.sh --check
-./scripts/test-settings-reorder.sh --click <preview-pid> <x> <y>
-./scripts/test-settings-reorder.sh <preview-pid> <from-x> <from-y> <to-x> <to-y> <duration-seconds> [--cancel]
-```
-
-`--check` 查询已有权限；`--click` 点击尚未聚焦的名称输入框，以 10 毫秒间隔观察 AX 焦点，最多等待 2 秒，输出鼠标按下到字段聚焦的耗时并保存 `click.png`。拖动模式在放开前保存 `drag.png`，`--cancel` 在截图后按 Esc 取消移动，拖动时间为 0.5–10 秒。
-
-实际鼠标输入须先获得用户明确许可；工具仅操作 `com.axiomace.ecmenu.test.preview` 窗口，坐标相对窗口左上角。它不申请系统权限，结束后恢复此前应用焦点；辅助程序、module cache 和截图保存在本次 `.artifacts/scratch/probes/YYYYMMDD-HHMMSS-settings-reorder-<pid>/`，编译日志保存在 `scratch/logs/`，不占用 Derived Data。测量与截图的证据边界见[原生列表交互诊断](../spec/Technical/PreviewTarget.md#原生列表交互诊断)。
-
-一次生成全部 Preview 的中英文窗口截图：
-
-```bash
-./scripts/capture-previews.sh
-./scripts/capture-previews.sh status-page-general status-page-context-menu
-```
-
-该脚本只构建一次，并从 Preview 注册表验证场景；未指定 Preview ID 时捕获全部场景，也可以只捕获指定场景，始终分别生成英文与简体中文版本。每个 Preview 进程先自行激活目标窗口；窗口成为 key window、完成布局且尺寸稳定后，脚本才按窗口编号生成不含阴影的独立窗口截图，圆角外保持透明，并在截图完成后确认捕获期间没有失焦。失焦图片会被删除且本次运行失败。批量截图与交互预览互斥运行；截图和运行日志分别写入带本次时间与进程号的 `.artifacts/scratch/previews/` 与 `.artifacts/scratch/logs/` 目录。截图依赖运行脚本的终端具有“屏幕与系统音频录制”权限，不使用辅助功能权限。
-
-## Finder 菜单截图
-
-```bash
-./scripts/capture-finder-menus.sh
-./scripts/capture-finder-menus.sh multiple-images
-./scripts/capture-finder-menus.sh new-file-submenu
-./scripts/capture-finder-menus.sh --language en plain-file
-./scripts/capture-finder-menus.sh --language zh-Hans plain-file
-./scripts/capture-finder-menus.sh --list
-./scripts/capture-finder-menus.sh --list-languages
-```
-
-该脚本构建并运行当前 Debug 版本，再为目录背景、普通文件、目录和多张图片建立固定 fixture，打开 Finder 的真实右键菜单并分别截图。`new-file-submenu` 展开目录背景菜单的“新建文件”，同时捕获主菜单和一级模板子菜单，不执行模板命令。默认依次截取英文与简体中文的全部场景；`--language` 可重复传入，也可与场景 ID 组合用于单语言调试。图片和逐场景日志按 `<run>/<language>/<scenario>` 分组。
-
-真实菜单同时包含 Finder 原生项目与 Finder Extension 项目。脚本只临时修改 Finder 和当前 Debug 主应用各自的 `AppleLanguages`；主应用在准备阶段启动一次，此后保持同一 PID，每种语言及最终恢复都只重启 Finder 和 Extension。系统全局语言、地区格式、Release 身份和 Extension 自身偏好均不改变。运行前必须关闭所有 Finder 窗口，脚本在修改偏好前、每个场景后和最终恢复后都会验证没有窗口遗留。
-
-每张图片只包含菜单的透明窗口，展开场景保留主菜单和子菜单的实际相对位置，不包含窗口阴影、后方 Finder 窗口或桌面；脚本会分别核对当前语言下的 Finder 原生标志项和该场景必须出现的 ECMenu 命令，并在截图后重新确认 Finder、来源窗口、菜单位置和菜单项均未变化。当前配置中关闭了必需命令时，本次截图会失败，不改写用户配置。
-
-场景定义位于 `Tests/FinderMenuCapture/`：基础上下文集中在 `Contexts/`，各命令的菜单期望与执行验收位于对应的 `Features/`，图片 fixture 与多图场景由 `Features/ImageCompression/` 持有。根目录的 `FinderMenuAutomation` 与 `CLICommand` 装配工具操作；通用输入校验、权限查询、Finder 打开、Accessibility 读取和菜单生命周期封装在 `Support/`。职责与源码入口见[捕获工具映射](../spec/Technical/FinderMenuCapture.md#执行流与源码映射)。`--check` 验证注册表、fixture、本地化键、辅助程序编译及其静态 TCC 身份配置，已包含在 `test.sh` 与 CI 中；真实 Finder 截图不在无人值守的 CI 中运行。
-
-真实截图运行时需要保持 macOS 桌面已解锁且不要操作 Finder。运行端需要“辅助功能”和“屏幕与系统音频录制”权限；这些权限只用于开发截图工具，ECMenu 产品本身仍不需要辅助功能权限。截图、fixture 和日志使用同一单次运行名称，分别位于 `.artifacts/scratch/{previews,tests,logs}/`。`--check` 只验证场景、语言定义、本地化键、Finder 资源映射、fixture、辅助程序编译及静态 TCC 身份，不修改偏好或重启进程。
-
-已签名的 `FinderMenuAutomation` 提供独立的模板执行验收入口：
-
-```text
-.derivedData/Build/Products/Debug/FinderMenuAutomation create-file <submenu.png> <fixture-directory> <parent-title> <template-title> <expected-file-name>
-```
-
-该入口截图模板子菜单并点击指定叶子，等待文件生成及 Finder 结果选择后清理本轮窗口。中文默认模板的后三个参数为 `"新建文件" TXT untitled.txt`；目录和截图使用仓库内的单次 scratch 路径。输入前提、子菜单等待和清理边界见[显式模板执行验收](../spec/Technical/FinderMenuCapture.md#显式模板执行验收)。
-
-平台契约、窗口所有权、透明截图方案和已排除的失败路径见 [Finder 菜单自动截图](../spec/Technical/FinderMenuCapture.md)。
-
-## README 图片
-
-```bash
-./scripts/capture-readme-images.sh
-```
-
-该脚本复用上述两个截图入口，分别捕获英文与简体中文截图，合成同尺寸、宽高比为 `5:4` 的透明图片：左侧从上到下排列通用、右键菜单和文件模板三个设置页，右侧展示展开“新建文件”的 Finder 主菜单及一级模板子菜单，整组内容在画布内居中。设置页中所有开关均开启，外部应用使用本机安装的真实图标；缺少 Visual Studio Code 或 iTerm2 时会在刷新 Finder 前失败。合成过程不裁切来源截图；三个设置页保持原尺寸，Finder 菜单放大至 `1.8×` 并在右侧垂直居中。全部捕获和校验成功后，从本轮 Preview 产物读取版本，写入 `.docs/images/overview-v<version>-en.png` 与 `.docs/images/overview-v<version>-zh-Hans.png`，同步两个 README 的引用并移除被替换的图片。纯图片排版由 `Tests/READMEImageCapture/Support/READMEOverviewComposer.swift` 负责，编译产物、来源截图和日志均位于对应的 `.artifacts/scratch/` 运行目录。
-
-`python3 scripts/check-readme-images.py` 核对两份 README 是否各自引用与工程 `MARKETING_VERSION` 一致的图片，并确认文件存在且非空。该检查同时在截图结束时和 CI 中执行；升级工程版本后需要重新截图。图内显示的版本由实际 Preview 产物提供，视觉内容由截图后的人工检查确认。
-
-README 文件模板预览依次为 TXT、Markdown、Word，默认文件名分别为 `untitled.txt`、`untitled.md`、`untitled.docx`；配置位于 [README 预览场景](../Tests/ECMenuPreviews/Cases/READMEStatusPagePreview.swift)。真实菜单读取当前 Debug 模板库，拍摄前需准备名称、后缀和顺序一致的清单，拍摄后恢复原库。替换前先停止 Debug 主应用，并保留整个模板库及内容副本；恢复后重新启动主应用，使内存缓存与磁盘一致。
-
-该入口持有完整截图过程的互斥锁，并沿用 Finder 菜单截图的零窗口前置条件、语言恢复和权限要求。运行时保持桌面已解锁且不要操作 Finder。
-
-## 应用图标
-
-```bash
-./scripts/generate-app-icon.sh
-./scripts/generate-app-icon.sh --check
-```
-
-`design/AppIcon/` 是唯一设计源包：SVG 保存几何、颜色与设置页命名视窗，JSON 模板保存 Icon Composer 图层、阴影和材质，同目录组合脚本只负责读取、校验、资源拆分与预览验证，并把可重建产物写入 `design/AppIcon/output/`。默认命令重新组合后只同步发生变化的 Xcode 正式资源；`--check` 不写项目资源，只检查它们是否与设计输出一致。设计预览位于 `design/AppIcon/output/Preview/`，详细边界见[应用图标设计源](../design/AppIcon/Main.md)。
-
-所有脚本默认使用 `/Applications/Xcode.app/Contents/Developer` 和 `platform=macOS,arch=arm64`，可通过 `DEVELOPER_DIR` 与 `XCODE_DESTINATION` 覆盖。
+项目模板必须关机，准备始终从公共基线建立新候选，来宾正常关机完成后事务替换；日常验收克隆项目模板使用已封存的应用、权限和构建缓存，引导前检查项目 scratch 不存在。公开启动设置、应用版本与封存边界在[虚拟机协议](../spec/Technical/Delivery/VirtualMachineTests.md#环境与缓存)维护，预热及普通启动截图不代替产品流程验收。普通源码变化直接同步并增量构建；工具、目标应用或公共封存变化时重新准备，构建耗时明显增加时可主动刷新缓存。共享 `.derivedData/` 或 Finder 登记状态的手动脚本顺序执行，虚拟机调度使用所有项目共用的内核锁。

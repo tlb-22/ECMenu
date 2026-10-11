@@ -40,6 +40,12 @@
 - 日常 Debug 构建与运行使用 `./scripts/run-debug.sh`，完整测试使用 `./scripts/test.sh`；共享 `.derivedData/` 或 Finder 登记状态的脚本顺序执行。删除 `.derivedData/` 前，先停止并注销从其中运行的应用和 Finder Extension。
 - 图标变化但程序坞仍显示旧缓存时使用 `./scripts/run-debug.sh --refresh-icon`；Finder Extension 源码变化、菜单消失或扩展未加载时使用 `./scripts/run-debug.sh --refresh-finder`。
 
+## 测试规范
+
+- 端到端优先：必须优先使用端到端测试，以真实用户流程验证功能交付，不得以单元测试替代完整流程验收；测试必须产出可检查且可重复生成的结果。
+- 严格限制单测：只有关键行为难以通过端到端测试有效验证时才允许单元测试，且必须先写测试、再写实现；测试前明确真实失败模式，禁止事后围绕既有实现补写单测。
+- 测试成本控制：小功能只需要针对性简单手动测试，不需要运行完整测试；只有大修改或者版本发布前才进行完整测试。
+
 ## Finder Extension 调试
 
 - Extension 是否启用、是否登记、是否运行是三个独立状态；菜单消失时先区分加载失败与菜单代码返回空结果。

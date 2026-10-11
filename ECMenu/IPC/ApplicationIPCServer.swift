@@ -6,7 +6,7 @@
 import Foundation
 import OSLog
 
-/// 应用生命周期持有的监听资源，测试可注入失败和恢复。
+/// 应用生命周期持有的监听资源，由唯一所有者负责停止。
 nonisolated protocol ApplicationIPCListening: AnyObject, Sendable {
     func stop()
 }
@@ -61,7 +61,8 @@ final class ApplicationIPCServer {
         }, didStart: didStart)
     }
 
-    init(makeTransport: @escaping MakeTransport, didStart: @escaping () -> Void) {
+    /// 保存生产监听构造与启动通知，供首次启动和失败后恢复共用。
+    private init(makeTransport: @escaping MakeTransport, didStart: @escaping () -> Void) {
         self.makeTransport = makeTransport
         self.didStart = didStart
     }

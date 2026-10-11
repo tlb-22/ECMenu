@@ -40,3 +40,24 @@ finder_menu_capture_finder_marker_title() {
             ;;
     esac
 }
+
+# 产品需求中的固定命令名称；预期独立于生产本地化目录，避免文案回归同步改变答案。
+finder_menu_capture_command_title() {
+    case "$1:$2" in
+        command.newFile:en) print -r -- 'New File' ;;
+        command.copyPath:en) print -r -- 'Copy Path' ;;
+        command.hideItems:en) print -r -- 'Hide Items' ;;
+        command.showItems:en) print -r -- 'Show Items' ;;
+        command.compressImages:en) print -r -- 'Compress Images' ;;
+        command.openInVisualStudioCode:en) print -r -- 'Open in Visual Studio Code' ;;
+        command.openInITerm2:en) print -r -- 'Open in iTerm2' ;;
+        command.newFile:zh-Hans) print -r -- '新建文件' ;;
+        command.copyPath:zh-Hans) print -r -- '拷贝路径' ;;
+        command.hideItems:zh-Hans) print -r -- '隐藏项目' ;;
+        command.showItems:zh-Hans) print -r -- '显示项目' ;;
+        command.compressImages:zh-Hans) print -r -- '压缩图片' ;;
+        command.openInVisualStudioCode:zh-Hans) print -r -- '进入 Visual Studio Code' ;;
+        command.openInITerm2:zh-Hans) print -r -- '进入 iTerm2' ;;
+        *) return 64 ;;
+    esac
+}

@@ -1,5 +1,5 @@
-# 在 macOS CI 环境中准备 Apple Development 签名身份并执行项目验证。
-# 检查图标资源和 README 图片版本、运行统一测试入口，并在失败时上传诊断产物。
+# 在 macOS CI 环境中准备 Apple Development 签名身份并执行构建与关键故障注入检查。
+# 检查图标资源和 README 图片版本、运行有限的 CI 检查入口，并在失败时上传诊断产物。
 
 name: CI
 
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   test:
-    name: Tests
+    name: Build and exceptional behavior checks
     runs-on: macos-26
     timeout-minutes: 30
     env:
@@ -39,12 +39,15 @@ jobs:
             exit 1
           fi
 
-          certificate_path="$RUNNER_TEMP/build-certificate.p12"
-          keychain_path="$RUNNER_TEMP/ecmenu-ci.keychain-db"
+          certificate_path="$GITHUB_WORKSPACE/.artifacts/scratch/probes/$(date +%Y%m%d-%H%M%S)-ci-signing-$$/build-certificate.p12"
+          keychain_path="${certificate_path%/*}/ecmenu-ci.keychain-db"
+          mkdir -m 700 -p "${certificate_path%/*}"
+          printf 'ECMENU_CI_SIGNING_DIRECTORY=%s\n' "${certificate_path%/*}" >> "$GITHUB_ENV"
           keychain_password="$(openssl rand -hex 32)"
 
           printf '%s' "$BUILD_CERTIFICATE_BASE64" \
             | base64 --decode -o "$certificate_path"
+          chmod 600 "$certificate_path"
           security create-keychain -p "$keychain_password" "$keychain_path"
           security set-keychain-settings -lut 21600 "$keychain_path"
           security unlock-keychain -p "$keychain_password" "$keychain_path"
@@ -66,8 +69,17 @@ jobs:
       - name: Check README image versions
         run: python3 scripts/check-readme-images.py
 
-      - name: Run tests
-        run: ./scripts/test.sh
+      - name: Run build and exceptional behavior checks
+        run: ./scripts/test-checks.sh
+
+      - name: Remove temporary signing material
+        if: ${{ always() && env.ECMENU_CI_SIGNING_DIRECTORY != '' }}
+        run: |
+          keychain_path="$ECMENU_CI_SIGNING_DIRECTORY/ecmenu-ci.keychain-db"
+          if [[ -f "$keychain_path" ]]; then
+            security delete-keychain "$keychain_path"
+          fi
+          rm -rf "$ECMENU_CI_SIGNING_DIRECTORY"
 
       - name: Upload failure diagnostics
         if: ${{ failure() }}

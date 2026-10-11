@@ -15,7 +15,7 @@ enum FinderPointer {
         return CGPoint(x: frame.midX, y: frame.midY)
     }
 
-    static func click(at location: CGPoint) throws {
+    static func click(at location: CGPoint, flags: CGEventFlags = []) throws {
         guard let mouseDown = CGEvent(
             mouseEventSource: nil,
             mouseType: .leftMouseDown,
@@ -29,7 +29,12 @@ enum FinderPointer {
         ) else {
             throw AutomationFailure.pointerEventUnavailable
         }
+        mouseDown.flags = flags
+        mouseUp.flags = flags
+        mouseDown.setIntegerValueField(.mouseEventClickState, value: 1)
+        mouseUp.setIntegerValueField(.mouseEventClickState, value: 1)
         mouseDown.post(tap: .cghidEventTap)
+        runLoopSlice(0.05)
         mouseUp.post(tap: .cghidEventTap)
     }
 
@@ -47,6 +52,8 @@ enum FinderPointer {
         ) else {
             throw AutomationFailure.pointerEventUnavailable
         }
+        mouseDown.flags = []
+        mouseUp.flags = []
         mouseDown.post(tap: .cghidEventTap)
         mouseUp.post(tap: .cghidEventTap)
     }
@@ -60,6 +67,7 @@ enum FinderPointer {
         ) else {
             throw AutomationFailure.pointerEventUnavailable
         }
+        mouseMove.flags = []
         mouseMove.post(tap: .cghidEventTap)
     }
 }

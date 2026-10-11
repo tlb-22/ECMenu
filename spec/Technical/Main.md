@@ -29,7 +29,7 @@ ECMenuFinderExtension/          Finder Extension
 ECMenuShared/
 ├── Contracts/                  两个产品目标共用的值与请求
 └── Platform/                   实际复用的系统实现
-Tests/                          单元测试、集成测试与独立界面预览
+Tests/                          真实桌面验收、故障注入例外与界面预览
 design/AppIcon/                 应用图标设计源与生成产物
 scripts/                        构建、运行、测试与交付入口
 spec/                           当前需求与技术知识
@@ -49,5 +49,5 @@ spec/                           当前需求与技术知识
 - [功能技术决策](Features/Main.md)：各业务能力依赖的平台 API 与不可由单个源码位置恢复的约束。
 - [界面预览目标](PreviewTarget.md)：独立 Preview target 与生产代码的边界。
 - [Finder 菜单自动截图](FinderMenuCapture.md)：真实 Finder 菜单的自动驱动、独立窗口捕获、稳定边界与失败经验。
-- [自动化脚本的用户焦点恢复](UserFocusRestoration.md)：自动化结束后的前台应用恢复、嵌套边界与 macOS Space 行为。
-- [测试期间的 Finder 窗口保持](FinderWindowPreservation.md)：窗口集合核对、失败退出与无需新增授权的检查边界。
+- [手动开发入口的用户焦点恢复](UserFocusRestoration.md)：构建启动与环境切换后的前台应用恢复。
+- [虚拟机端到端测试](Delivery/VirtualMachineTests.md)：项目模板、签名凭据、真实流程与结果边界。

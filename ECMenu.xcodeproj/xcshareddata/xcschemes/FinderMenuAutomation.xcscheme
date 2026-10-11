@@ -16,7 +16,7 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "Q10000000000000000000006"
-               BuildableName = "FinderMenuAutomation"
+               BuildableName = "FinderMenuAutomation.app"
                BlueprintName = "FinderMenuAutomation"
                ReferencedContainer = "container:ECMenu.xcodeproj">
             </BuildableReference>
@@ -41,7 +41,7 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "Q10000000000000000000006"
-            BuildableName = "FinderMenuAutomation"
+            BuildableName = "FinderMenuAutomation.app"
             BlueprintName = "FinderMenuAutomation"
             ReferencedContainer = "container:ECMenu.xcodeproj">
          </BuildableReference>

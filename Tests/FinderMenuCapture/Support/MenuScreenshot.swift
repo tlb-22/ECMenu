@@ -1,6 +1,6 @@
 /**
- 将已验证的菜单快照匹配到 ScreenCaptureKit 窗口并保存透明 PNG。
- 单菜单定向捕获；父子菜单按屏幕原位一起捕获，排除桌面与其他窗口。
+ 将已验证的菜单快照或 Preview 就绪窗口匹配到 ScreenCaptureKit 并保存透明 PNG。
+ 独立窗口定向捕获；父子菜单按屏幕原位一起捕获，排除桌面与其他窗口。
  */
 
 import CoreGraphics
@@ -10,13 +10,29 @@ import ScreenCaptureKit
 import UniformTypeIdentifiers
 
 enum MenuScreenshot {
+    static func requireVisible(_ menu: MenuSnapshot) async throws {
+        _ = try await menuWindow(matching: menu)
+    }
+
+    static func captureWindow(number: CGWindowID, includingChildWindows: Bool = false, to outputURL: URL) async throws {
+        let content = try await SCShareableContent.current
+        guard let window = content.windows.first(where: { $0.windowID == number && $0.isOnScreen }) else {
+            throw AutomationFailure.screenshotFailed("The requested ready window is no longer visible: \(number)")
+        }
+        try await capture(window, includingChildWindows: includingChildWindows, to: outputURL)
+    }
+
     static func capture(_ menu: MenuSnapshot, to outputURL: URL) async throws {
         let window = try await menuWindow(matching: menu)
+        try await capture(window, to: outputURL)
+    }
+
+    private static func capture(_ window: SCWindow, includingChildWindows: Bool = false, to outputURL: URL) async throws {
         let filter = SCContentFilter(desktopIndependentWindow: window)
         let configuration = SCScreenshotConfiguration()
         configuration.showsCursor = false
         configuration.ignoreShadows = true
-        configuration.includeChildWindows = false
+        configuration.includeChildWindows = includingChildWindows
         configuration.dynamicRange = .sdr
 
         let image: CGImage

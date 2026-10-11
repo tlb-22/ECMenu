@@ -15,32 +15,15 @@ nonisolated struct FileTemplateStorage {
             .appendingPathComponent("FileTemplates", isDirectory: true)
     }
 
-    private enum Location {
-        case applicationSupport
-        case directory(URL)
-    }
-
-    private let location: Location
     private let fileManager = FileManager.default
     private static let logger = Logger(
         subsystem: ApplicationLogging.subsystem,
         category: "NewFileTemplates"
     )
 
-    init() {
-        location = .applicationSupport
-    }
-
-    init(rootURL: URL) {
-        location = .directory(rootURL)
-    }
-
-    /// 生产身份仅在实际访问模板库时解析；注册命令和预览构造不依赖应用身份。
+    /// 在实际访问时读取当前产品身份，定位唯一的生产模板库。
     private var rootURL: URL {
-        switch location {
-        case .applicationSupport: Self.defaultRootURL
-        case .directory(let url): url
-        }
+        Self.defaultRootURL
     }
 
     private var indexURL: URL {

@@ -101,6 +101,8 @@ App Group 只让沙箱 Extension 到达组容器；权限为当前用户读写�
 
 ## 验证入口与证据范围
 
-[ContextCommandTransportTests](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift) 使用隔离端点验证 wire、双向签名身份、并发投递、无效 ACK、截断 frame、静默对端、提供者期限及监听资源故障。测试可注入短连接预算和 accept 结果；与生产共用同一认证和资源实现。[集成 Sender](../../../Tests/Integration/ContextCommandSender.swift) 是独立签名进程，可用于真实主应用通道的验收。
+真实主应用与 Finder Extension 的成功通信由[虚拟机日常验收](../../../Tests/Main.md)从菜单点击、配置更新及最终业务副作用共同确认。[集成 Sender](../../../Tests/Integration/ContextCommandSender.swift)保留独立签名进程入口，用于配置查询和命令投递的通道诊断。
 
-测试定义与执行记录是两类证据；入口存在不代表每个源码版本均已通过。系统调用与运行态身份的项目观察分别记在上文，适用版本为各段注明的 macOS/Xcode。Finder 的菜单与进程生命周期还需结合[菜单执行验证](MenuExecution.md#设计依据与验证)及[开发脚本](../../../scripts/Main.md)确认；传输测试不证明分布式通知可靠到达或业务操作成功。
+[ContextCommandTransportTests](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift)仅保留 accept 一次资源耗尽后恢复、资源退避中停止/释放的清理，以及致命错误清理先于回调三项系统边界例外；失败模式和必要性见[单元测试例外](../../../Tests/UnitTestExceptions.md)。它们使用隔离端点与精确 accept 错误，不承担 wire 往返、正常身份或业务成功的验收。
+
+系统调用与运行态身份的既有项目观察适用版本以上文各段为准。错误身份、异常 ACK、截断与静默对端，仅在本轮报告实际执行相应独立进程场景时算作当前验证；入口存在或正常通信成功均不证明这些失败路径已通过。分布式通知的可靠性与业务完成仍属于各自边界。

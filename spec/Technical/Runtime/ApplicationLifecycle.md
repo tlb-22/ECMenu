@@ -128,20 +128,15 @@ Finder Extension 的公开 URL 打开入口在当前验证环境中不能可靠�
 
 ## 验证与实机证据
 
-[ApplicationInitialOpenSourceTests](../../../Tests/ECMenuTests/App/ApplicationInitialOpenSourceTests.swift) 替换窗口与 activation policy 副作用，直接执行生产 AppDelegate 入口，覆盖：
+[虚拟机日常验收](../../../Tests/Main.md)通过普通打开、关闭真实设置窗口、重新打开和后台执行 Finder 命令验证配置会话与命令宿主。运行报告分别核对窗口、进程与实际副作用，不能由启用状态或缓存菜单推导宿主存在。独立 Preview 只验证页面呈现。
 
-- 首次普通打开与 didFinishLaunching 的两种先后顺序均只由启动入口开始监听。
-- 登录打开不显示配置，后续普通打开显示窗口并检查监听。
-- 最小化后重开、Command-Q 与业务窗口并存、Command-W 只结束其实际关闭的窗口。
-- regular 策略拒绝时不显示窗口，登录标记的 descriptor 解释不依赖猜测。
-
-这些测试证明事件协调在给定效果边界下的结果，不代替 AppKit 的实际窗口、Dock/Space 或真实 loginwindow。独立 Preview 验证页面呈现，不复用主应用的真实登录项和进程生命周期。
+真实 loginwindow 的既有观察保留在“登录启动”一节；当前日常流程不执行真实注销登录。
 
 | 实机主题 | 已有依据 | 复核条件与限制 |
 |---|---|---|
 | 注销、登录与窗口恢复 | 上文 macOS 26.6.1 / Xcode 26.6 环境的 loginwindow 观察 | 真实开启并批准登录项，关闭配置会话，分别选择和取消“重新打开窗口”后注销/登录，核对状态页、Dock、激活与命令可用性；不能只手工构造 Apple Event |
 | Extension 仍在而主应用已退出 | [Extension 生命周期](../Platform/Finder/ExtensionLifecycle.md)记录 URL 冷启动入口的实际失败 | 在独立验收环境观察菜单仍存在时的投递错误，再普通打开主应用并验证恢复；不得把已有菜单或启用 Bool 当作执行端证据 |
-| 监听故障恢复 | [IPC](IPC.md)记录 macOS 26.6.1 的连接/监听系统调用探针，测试注入监听失败 | 探针验证系统调用边界，不能替代两端当前签名产物及真实 Finder 回调；恢复后需核对当前进程和登记路径 |
+| 监听故障恢复 | [IPC](IPC.md)记录 macOS 26.6.1 的连接/监听系统调用探针；单元例外验证 accept 故障清理 | 探针验证系统调用边界，不能替代两端当前签名产物及真实 Finder 回调；恢复后需核对当前进程和登记路径 |
 
 官方 API、项目观察和推断分别维护在上述链接中。平台升级后的实际登录、配置窗口恢复与业务窗口交互需要独立验收；自动化通过不扩展既有实机证据的版本范围。
 

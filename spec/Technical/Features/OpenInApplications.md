@@ -65,6 +65,14 @@ macOS 26.5 SDK `NSWorkspace.h` 明确异步打开回调的队列和成功/失败
 
 ## 验证与实机证据
 
-[OpenInApplicationTests](../../../Tests/ECMenuTests/Commands/OpenInApplication/OpenInApplicationTests.swift)覆盖目录约束、目标消失、应用消失、原始 URL 保留和注入启动失败。自动化不启动用户的编辑器或终端。
+[虚拟机日常验收](../../../Tests/Main.md)在来宾安装实际 VS Code 与 iTerm2，从真实 Finder 菜单触发打开请求，检查命令适用范围、应用启动与可见窗口，并保存独立目标清单、应用版本和各应用全部可见窗口截图。定义见[外部应用验收](../../../Tests/FinderMenuCapture/Desktop/DesktopExternalApplicationsAcceptance.swift)。
 
-VS Code 是否复用窗口、iTerm2 是否将目录作为工作目录是外部应用验收边界。实机复验应记录 macOS、VS Code 与 iTerm2 版本，以普通目录、package 和符号链接分别执行；现有技术记录没有完整的外部应用版本矩阵，不将回调成功当作这些行为的实测证明。
+外部应用安装、公开启动选项和一次性常规启动检查由项目模板准备拥有，版本适用范围见[环境与缓存](../Delivery/VirtualMachineTests.md#环境与缓存)。日常产品流程直接使用已准备应用，从真实 ECMenu 菜单触发请求。
+
+[ExternalApplicationWindows](../../../Tests/FinderMenuCapture/Support/ExternalApplicationWindows.swift)等待实际应用进程和 ScreenCaptureKit 中属于该 PID 的屏幕可见普通窗口（`windowLayer == 0`），为普通窗口绘制留出两秒后重新枚举，逐窗保存包含附属 sheet 的 PNG，并记录窗口编号、标题与图片路径清单。绘制等待不作为目标加载完成的断言。标题作为检查材料，不参与目标匹配；请求目录与文件由独立目标清单保存，人工据此对照真实内容。截图保留应用的首次引导和权限提示，驱动不操作这些界面。
+
+外部应用目标加载、窗口复用和终端工作目录由人工检查；报告使用 `review-pending`，由 `manualReview` 保存检查说明与证据。截图保留第三方应用当时的可见状态，包括可能出现的首次引导；驱动的边界是 ECMenu 菜单操作与系统应用窗口，避免依赖第三方应用内部控件、文案和快捷命令协议。
+
+项目验收证据（2026-10-11，macOS 26.6.2、VS Code 1.141.0、iTerm2 3.7.4，运行标识 `20261011-073034-vm-desktop-92596`）：独立目标清单记录文本 `ECMenu-open-target.txt`、项目目录 `ECMenu-project-folder` 和终端目录 `external-app-target`。真实菜单适用范围、打开请求和可见窗口检查完成，截图与目标清单成功导出。人工观察到当次 Code 截图显示预期正文与项目目录，iTerm 提示符显示目标目录 basename；完整终端工作目录尚未复核，报告继续为 `review-pending`，截图观察不作为自动目标加载断言。
+
+实机复验记录 macOS、VS Code 与 iTerm2 版本，以普通目录、package 和符号链接分别执行，观察目标内容与实际工作目录。现有技术记录没有完整的外部应用版本矩阵；系统打开回调与窗口截图不构成目标已加载的自动证明。

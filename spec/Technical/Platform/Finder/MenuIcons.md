@@ -60,4 +60,4 @@ Launch Services 返回的应用和文件类型图标没有 SF Symbols 的字形�
 
 ## 验证
 
-菜单对象测试验证模板叶子与父菜单的 `NSImage.size`、`alignmentRect` 相同且保留彩色图标；快照与 IPC 测试覆盖后缀保存、传输和缓存。2026-09-11 在 macOS 26.6.2 上完成真实 MD、TXT 子菜单截图，确认图标比例与菜单布局；运行标识、截图路径及验证范围见[界面验证记录](../../Architecture/Verification.md#界面与真实-finder)。
+[虚拟机日常验收](../../../../Tests/Main.md)在真实 Finder 菜单保留图标截图和菜单结构，并以当前流程报告说明实际检查的模板与语言。2026-09-11 在 macOS 26.6.2 上完成真实 MD、TXT 子菜单截图，确认图标比例与菜单布局；运行标识、截图路径及验证范围见[界面验证记录](../../Architecture/Verification.md#界面与真实-finder)。

@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "environmentDirectory": "~/path/to/vm-environment",
+  "template": "your-ecmenu-template",
+  "directory": "Workspaces/ECMenu",
+  "applications": [
+    "/Applications/Visual Studio Code.app",
+    "/Applications/iTerm.app"
+  ]
+}

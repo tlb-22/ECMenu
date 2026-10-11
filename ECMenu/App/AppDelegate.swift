@@ -10,8 +10,7 @@ import OSLog
 /// 协调常驻命令宿主与可退出的配置界面生命周期。
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let injectedEffects: ApplicationLifecycleEffects?
-    private lazy var effects = injectedEffects ?? ApplicationLifecycleEffects(
+    private lazy var effects = ApplicationLifecycleEffects(
         startIPC: { [weak self] in self?.composition.applicationIPCServer.startIfNeeded() },
         changeActivationPolicy: { policy in
             NSApp.activationPolicy() == policy || NSApp.setActivationPolicy(policy)
@@ -22,24 +21,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         activate: { NSApp.activate(ignoringOtherApps: true) }
     )
 
-    override init() {
-        injectedEffects = nil
-        super.init()
-    }
-
-    /// 测试替换系统边界，直接验证生产事件处理路径。
-    init(effects: ApplicationLifecycleEffects) {
-        injectedEffects = effects
-        super.init()
-    }
-
     /// 记录无法完成的应用呈现状态切换。
     private let logger = Logger(
         subsystem: ApplicationLogging.subsystem,
         category: "ApplicationLifecycle"
     )
 
-    /// AppKit 安装 delegate 后按首次生命周期事件装配一次，测试直接注入 effects。
+    /// AppKit 安装 delegate 后按首次生命周期事件装配一次。
     private lazy var composition = ApplicationComposition(didCloseConfiguration: { [weak self] in
         self?.handleConfigurationWindowDidClose()
     })

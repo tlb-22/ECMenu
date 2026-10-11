@@ -8,8 +8,6 @@
 
 /* Begin PBXBuildFile section */
 		A10000000000000000000001 /* ECMenuFinderExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = A10000000000000000000002 /* ECMenuFinderExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		H10000000000000000000001 /* CompositionExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = H10000000000000000000004 /* CompositionExpectation.swift */; };
-		H10000000000000000000002 /* CompositionExpectation.swift in Sources */ = {isa = PBXBuildFile; fileRef = H10000000000000000000004 /* CompositionExpectation.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -55,10 +53,9 @@
 		A10000000000000000000002 /* ECMenuFinderExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = ECMenuFinderExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		E10000000000000000000001 /* ECMenuTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ECMenuTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		H10000000000000000000003 /* ECMenuFinderExtensionTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = ECMenuFinderExtensionTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
-		H10000000000000000000004 /* CompositionExpectation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CompositionExpectation.swift; sourceTree = "<group>"; };
 		I10000000000000000000001 /* ContextCommandSender */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = ContextCommandSender; sourceTree = BUILT_PRODUCTS_DIR; };
 		P10000000000000000000001 /* ECMenuPreviews.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ECMenuPreviews.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		Q10000000000000000000001 /* FinderMenuAutomation */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = FinderMenuAutomation; sourceTree = BUILT_PRODUCTS_DIR; };
+		Q10000000000000000000001 /* FinderMenuAutomation.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = FinderMenuAutomation.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -239,7 +236,6 @@
 				H10000000000000000000007 /* Tests/ECMenuFinderExtensionTests */,
 				I10000000000000000000002 /* Tests/Integration */,
 				Q10000000000000000000002 /* Tests/FinderMenuCapture */,
-				H1000000000000000000000F /* Tests/Support */,
 				2863D49030273A440090DB7A /* Products */,
 			);
 			sourceTree = "<group>";
@@ -253,19 +249,10 @@
 				E10000000000000000000001 /* ECMenuTests.xctest */,
 				H10000000000000000000003 /* ECMenuFinderExtensionTests.xctest */,
 				I10000000000000000000001 /* ContextCommandSender */,
-				Q10000000000000000000001 /* FinderMenuAutomation */,
+				Q10000000000000000000001 /* FinderMenuAutomation.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
-		};
-		H1000000000000000000000F /* Tests/Support */ = {
-			isa = PBXGroup;
-			children = (
-				H10000000000000000000004 /* CompositionExpectation.swift */,
-			);
-			name = Support;
-			path = Tests/Support;
-			sourceTree = SOURCE_ROOT;
 		};
 /* End PBXGroup section */
 
@@ -430,8 +417,8 @@
 			packageProductDependencies = (
 			);
 			productName = FinderMenuAutomation;
-			productReference = Q10000000000000000000001 /* FinderMenuAutomation */;
-			productType = "com.apple.product-type.tool";
+			productReference = Q10000000000000000000001 /* FinderMenuAutomation.app */;
+			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
@@ -561,7 +548,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				H10000000000000000000001 /* CompositionExpectation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -569,7 +555,6 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				H10000000000000000000002 /* CompositionExpectation.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -929,10 +914,6 @@
 			buildSettings = {
 				CODE_SIGN_STYLE = Automatic;
 				DEVELOPMENT_TEAM = GVPW27HJZ5;
-				EXCLUDED_SOURCE_FILE_NAMES = (
-					ContextMenuCompositionTests.swift,
-					FinderDirectoryRegistrationTests.swift,
-				);
 				GENERATE_INFOPLIST_FILE = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.axiomace.ecmenu.test.finderext;
@@ -1050,13 +1031,14 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = GVPW27HJZ5;
 				ENABLE_APP_SANDBOX = NO;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = FinderMenuAutomation;
+				INFOPLIST_KEY_LSUIElement = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				OTHER_CODE_SIGN_FLAGS = "$(inherited) --identifier $(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.axiomace.ecmenu.test.findermenuautomation;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;
@@ -1072,13 +1054,14 @@
 			buildSettings = {
 				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
-				CREATE_INFOPLIST_SECTION_IN_BINARY = YES;
 				DEVELOPMENT_TEAM = GVPW27HJZ5;
 				ENABLE_APP_SANDBOX = NO;
+				ENABLE_DEBUG_DYLIB = NO;
 				ENABLE_HARDENED_RUNTIME = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = FinderMenuAutomation;
+				INFOPLIST_KEY_LSUIElement = YES;
 				MACOSX_DEPLOYMENT_TARGET = 26.0;
-				OTHER_CODE_SIGN_FLAGS = "$(inherited) --identifier $(PRODUCT_BUNDLE_IDENTIFIER)";
 				PRODUCT_BUNDLE_IDENTIFIER = com.axiomace.ecmenu.test.findermenuautomation;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SKIP_INSTALL = YES;

@@ -62,6 +62,6 @@ macOS 26.5 SDK `NSURL.h:226` 声明隐藏资源键可读写，同时明确点号
 
 ## 验证与实机证据
 
-[VisibilityTests](../../../Tests/ECMenuTests/Commands/Visibility/VisibilityTests.swift)覆盖普通文件、目录、符号链接、点号过滤、非递归写入、权限错误分类及单项失败后继续。[Finder 菜单组合测试](../../../Tests/ECMenuFinderExtensionTests/Menu/ContextMenuCompositionTests.swift)覆盖背景/侧边栏排除、未知状态与混合选择。
+[虚拟机日常验收](../../../Tests/Main.md)通过真实 Finder 菜单执行隐藏与显示，核对文件 flags、菜单出现与缺失以及原对象身份。目录子项、符号链接目标、点号名称和失败后批内继续的结果须由相应真实 fixture 与运行报告证明，不能由菜单标题或内部规则断言推导通过。
 
 已有项目观察为上述文件样本；原有记录未单独提供文件系统与 OS 版本矩阵，因此不据此保证其他卷行为。实机复验应记录 macOS 与目标卷类型，在 Finder 检查隐藏/显示前后对象、链接目标和目录子项。完整自动化入口见[命令执行](../Runtime/CommandExecution.md#验证入口)。

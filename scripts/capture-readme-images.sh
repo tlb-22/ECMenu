@@ -8,10 +8,6 @@ set -euo pipefail
 readonly script_path="${0:A}"
 readonly script_directory="${script_path:h}"
 readonly project_root="${script_directory:h}"
-readonly operation_lock_directory="$project_root/.artifacts/scratch/probes"
-readonly operation_lock="$operation_lock_directory/preview-operation.lock"
-
-source "$script_directory/lib/user-focus.sh"
 
 usage() {
     print "Usage: ./scripts/capture-readme-images.sh"
@@ -22,20 +18,8 @@ if (( $# != 0 )); then
     exit 64
 fi
 
-ecmenu_reexec_preserving_user_focus "$script_path" "$@"
-
-if [[ "${ECMENU_README_IMAGE_OPERATION_LOCK:-}" != "$operation_lock" ]]; then
-    mkdir -p "$operation_lock_directory"
-    exec /usr/bin/lockf \
-        -k \
-        -t 0 \
-        "$operation_lock" \
-        /usr/bin/env \
-        ECMENU_README_IMAGE_OPERATION_LOCK="$operation_lock" \
-        ECMENU_PREVIEW_OPERATION_LOCK="$operation_lock" \
-        ECMENU_FINDER_MENU_OPERATION_LOCK="$operation_lock" \
-        "$script_path"
-fi
+source "$script_directory/lib/test-vm.sh"
+ecmenu_run_in_test_vm readme "$@"
 
 readonly run_timestamp="$(date '+%Y%m%d-%H%M%S')"
 readonly run_name="$run_timestamp-readme-image-capture-$$"
@@ -49,11 +33,15 @@ readonly composer_build_log="$log_directory/composer-build.log"
 readonly composer_log="$log_directory/composer.log"
 readonly finder_capture_stdout="$log_directory/finder-capture.stdout.log"
 readonly preview_capture_stdout="$log_directory/preview-capture.stdout.log"
+readonly template_fixture_directory="$test_directory/template-fixture"
+readonly template_fixture_stdout="$log_directory/template-fixture.stdout.log"
+readonly template_fixture_build_log="$log_directory/template-fixture-build.log"
 readonly generated_english_image="$composition_directory/overview-en.png"
 readonly generated_chinese_image="$composition_directory/overview-zh-Hans.png"
 readonly temporary_english_image="$documentation_image_directory/.overview-en.$$.png"
 readonly temporary_chinese_image="$documentation_image_directory/.overview-zh-Hans.$$.png"
 readonly developer_directory="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
+readonly desktop_job_runner="$project_root/Tests/VirtualMachine/run-desktop-job.py"
 
 fail() {
     print -u2 -r -- "$1"
@@ -180,6 +168,31 @@ preview_output_directory="$(
         "Localized previews: "
 )" || fail "Could not resolve the Preview screenshot directory."
 
+# 真正的 Finder 模板通过用户管理流程准备，与固定 Preview 的三行内容保持对应。
+source "$script_directory/lib/product-paths.sh"
+ecmenu_resolve_product_paths "$project_root/.derivedData/Build/Products/Debug" \
+    || fail "Could not resolve the current Debug product for README templates."
+DEVELOPER_DIR="$developer_directory" xcodebuild \
+    -project "$project_root/ECMenu.xcodeproj" -scheme FinderMenuAutomation \
+    -configuration Debug -destination "${XCODE_DESTINATION:-platform=macOS,arch=arm64}" \
+    -derivedDataPath "$project_root/.derivedData" build -quiet \
+    >"$template_fixture_build_log" 2>&1 \
+    || fail "Could not build the signed README desktop fixture driver."
+readonly template_helper="$project_root/.derivedData/Build/Products/Debug/FinderMenuAutomation.app/Contents/MacOS/FinderMenuAutomation"
+source "$script_directory/lib/code-signing.sh"
+codesign --verify --strict "$template_helper" 2>>"$template_fixture_build_log" \
+    || fail "README desktop fixture driver signature is invalid."
+readonly template_helper_team="$(ecmenu_code_signing_value "$template_helper" TeamIdentifier)"
+[[ -n "$template_helper_team" && "$template_helper_team" != not\ set \
+    && "$(ecmenu_code_signing_value "$template_helper" Identifier)" == com.axiomace.ecmenu.test.findermenuautomation \
+    && "$(ecmenu_code_signing_value "$ECMENU_PRODUCT_APP_PATH" TeamIdentifier)" == "$template_helper_team" ]] \
+    || fail "README fixture driver requires the actual product's real signing team."
+mkdir -p "$template_fixture_directory"
+python3 "$desktop_job_runner" "$test_directory/desktop-jobs/template-fixture" -- \
+    "$template_helper" prepare-readme-templates "$ECMENU_PRODUCT_APP_PATH" "$template_fixture_directory" \
+    >"$template_fixture_stdout" 2>"$log_directory/template-fixture.stderr.log" \
+    || fail "Could not prepare README templates through the real settings page."
+
 readonly preview_version="$(
     /usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' \
         "$project_root/.derivedData/Build/Products/Debug/ECMenuPreviews.app/Contents/Info.plist"
@@ -192,6 +205,9 @@ readonly chinese_image="$documentation_image_directory/overview-v$preview_versio
 if "$script_directory/capture-finder-menus.sh" \
     --language en \
     --language zh-Hans \
+    --expect-template TXT \
+    --expect-template Markdown \
+    --expect-template Word \
     new-file-submenu \
     | /usr/bin/tee "$finder_capture_stdout"; then
     :

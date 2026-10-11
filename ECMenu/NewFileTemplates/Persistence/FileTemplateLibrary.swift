@@ -7,17 +7,11 @@ import Foundation
 
 /// 主应用唯一拥有的已提交索引；同步存储操作在 actor 内串行执行。
 actor FileTemplateLibrary {
-    nonisolated static var defaultRootURL: URL { FileTemplateStorage.defaultRootURL }
-
     private let storage: FileTemplateStorage
     private var records: [FileTemplateRecord]?
 
     init() {
         storage = FileTemplateStorage()
-    }
-
-    init(rootURL: URL) {
-        storage = FileTemplateStorage(rootURL: rootURL)
     }
 
     /// 恢复索引或执行唯一一次初始化；空索引保留用户已删除全部模板的状态。
@@ -64,7 +58,7 @@ actor FileTemplateLibrary {
     }
 
     /// 名称修改只提交元数据，保留稳定身份、内容和列表顺序。
-    func update(_ template: FileTemplate) throws -> FileTemplateCommit {
+    private func update(_ template: FileTemplate) throws -> FileTemplateCommit {
         var current = try currentRecords()
         guard let position = current.firstIndex(where: { $0.template.id == template.id }) else {
             throw FileTemplateLibraryError.templateNotFound(template.id)

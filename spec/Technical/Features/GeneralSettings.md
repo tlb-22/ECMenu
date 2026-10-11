@@ -168,14 +168,8 @@ AppKit 是窗口可见、最小化、frame 和 key window 的所有者；窗口�
 
 ## 验证与实机证据
 
-| 验证入口或依据 | 覆盖内容 | 证据限制 |
-|---|---|---|
-| [登录项测试](../../../Tests/ECMenuTests/GeneralSettings/LoginItemControllerTests.swift) | 状态派生、notFound 后登记、待批准、错误后达到目标、重复请求和取消登记失败 | 注入 Service Management 替身；不能证明后续真实登录或批准结果 |
-| [系统状态测试](../../../Tests/ECMenuTests/GeneralSettings/StatusPageSystemStateTests.swift) | descriptor 依赖去重、每次刷新重查、启用与可见性可编辑规则、保留已存值 | 以内存系统事实验证，不能证明系统管理界面跳转或真实安装状态刷新时机 |
-| [图标测试](../../../Tests/ECMenuTests/Settings/StatusPageIconRendererTests.swift)、[本地化测试](../../../Tests/ECMenuTests/App/LocalizationCatalogTests.swift)与[Preview](../../../Tests/ECMenuPreviews/Cases/StatusPagePreview.swift) | 生产图标度量、中英文资源、禁用/待批准页面状态 | Preview 不代表 Finder host、系统设置或登录后的窗口恢复行为 |
-| [登录实机观察](../Runtime/ApplicationLifecycle.md#登录启动) | macOS 26.6.1（25G76）、Xcode 26.6（17F113）与 macOS 26.5 SDK 下，真实注销/登录事件及隐藏配置会话未被恢复 | 既有观察未记录精确源码提交；不等于任意 macOS 版本或账号状态保证 |
-| [Extension 平台证据](../Platform/Finder/ExtensionLifecycle.md) | SDK 的启用 Bool 和管理入口；已有账号下 Debug 登记/当前进程检查 | 启用不能证明已登记正确产物；首次安装、系统升级需独立验收 |
+[虚拟机日常验收](../../../Tests/Main.md)使用真实设置窗口验证页面切换、菜单开关、依赖状态与窗口关闭后的后台命令流程；[Preview](../../../Tests/ECMenuPreviews/Cases/StatusPagePreview.swift)提供中英文和禁用/待批准状态的固定内存截图。自动化报告区分页面呈现、系统状态读取与真实业务副作用。
 
-实机复核应分别检查：登记/取消登录项后系统实际状态、待批准时的开关、离开系统设置再回到应用后的重读、两个设置入口落点、页面选择恢复，以及窗口关闭/最小化后的行为。完全磁盘访问深链接是项目采用的入口；没有独立的跨版本跳转或授权查询保证。自动化定义与执行记录需区分，测试通过不替代真实注销、登录、Dock/Space 与系统设置验收。
+登录项的既有实机依据见[应用生命周期](../Runtime/ApplicationLifecycle.md#登录启动)：macOS 26.6.1（25G76）、Xcode 26.6（17F113）与 macOS 26.5 SDK 下，真实注销/登录事件及隐藏配置会话未被恢复。该观察未记录精确源码提交，不等于当前版本的真实登录验收。[Extension 平台证据](../Platform/Finder/ExtensionLifecycle.md)分别记录启用 Bool、系统管理入口、登记路径与运行进程的边界。
 
-当前代码的自动化与实机执行记录见[架构验证](../Architecture/Verification.md)。
+完全磁盘访问深链接是项目采用的入口，没有独立的跨版本跳转或授权查询保证。当前代码的自动化执行证据以本轮虚拟机报告为准；已有平台观察的版本和限制保存在[架构验证记录](../Architecture/Verification.md)。

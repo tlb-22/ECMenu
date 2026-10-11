@@ -102,8 +102,6 @@ enum AutomationFailure: Error {
     case finderWindowOwnershipAmbiguous
     case finderWindowTimeout
     case finderSelectionTimeout
-    case finderSelectAllUnavailable
-    case finderSelectAllScopeMismatch
     case keyboardEventUnavailable
     case pointerEventUnavailable
     case showMenuUnavailable
@@ -117,6 +115,7 @@ enum AutomationFailure: Error {
     case focusLost(String)
     case menuChanged
     case menuItemUnavailable(String)
+    case menuItemUnexpected(String)
     case screenshotFailed(String)
     case accessibility(AXOperation, AXError)
     case invalidAccessibilityValue(String)
@@ -142,8 +141,6 @@ enum AutomationFailure: Error {
         case .finderWindowOwnershipAmbiguous: "finder-window-ownership-ambiguous"
         case .finderWindowTimeout: "finder-window-timeout"
         case .finderSelectionTimeout: "finder-selection-timeout"
-        case .finderSelectAllUnavailable: "finder-select-all-unavailable"
-        case .finderSelectAllScopeMismatch: "finder-select-all-scope-mismatch"
         case .keyboardEventUnavailable: "keyboard-event-unavailable"
         case .pointerEventUnavailable: "pointer-event-unavailable"
         case .showMenuUnavailable: "show-menu-unavailable"
@@ -157,6 +154,7 @@ enum AutomationFailure: Error {
         case .focusLost: "focus-lost"
         case .menuChanged: "menu-changed"
         case .menuItemUnavailable: "menu-item-unavailable"
+        case .menuItemUnexpected: "unexpected-menu-item"
         case .screenshotFailed: "screenshot-failed"
         case .accessibility: "accessibility-error"
         case .invalidAccessibilityValue: "invalid-accessibility-value"
@@ -192,10 +190,6 @@ enum AutomationFailure: Error {
             "Finder created more than one possible window; none was claimed."
         case .finderWindowTimeout: "Finder did not create a focused window."
         case .finderSelectionTimeout: "Finder did not apply the requested selection."
-        case .finderSelectAllUnavailable:
-            "Finder did not expose its Command-A select-all action."
-        case .finderSelectAllScopeMismatch:
-            "Select-all capture requires every Finder item to belong to the scenario."
         case .keyboardEventUnavailable:
             "The Finder automation helper could not create a keyboard event."
         case .pointerEventUnavailable:
@@ -212,6 +206,7 @@ enum AutomationFailure: Error {
         case .windowCloseTimeout: "The owned Finder window did not close."
         case let .focusLost(reason): reason
         case .menuChanged: "The Finder menu rect or titles changed during capture."
+        case let .menuItemUnexpected(title): "An excluded menu command appeared during observation: \(title)"
         case let .menuItemUnavailable(title):
             "Expected one enabled menu item or submenu: \(title)"
         case let .screenshotFailed(message): "Screenshot failed: \(message)"

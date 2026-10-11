@@ -27,13 +27,13 @@ enum FinderContextReader {
         )
     }
 
-    /// 纯粹解释一次已经读取的 Finder 原始状态，供边界测试覆盖字段差异。
+    /// 纯粹解释一次已经读取的 Finder 原始状态。
     /// - Parameters:
     ///   - context: Finder 原始菜单种类映射后的值。
     ///   - targetedURL: `FIFinderSyncController.targetedURL()` 的返回值。
     ///   - selectedURLs: `selectedItemURLs()` 的返回值或空数组。
     /// - Returns: 不含无效字段组合的语义快照。
-    nonisolated static func snapshot(
+    nonisolated private static func snapshot(
         for context: FinderMenuContext,
         targetedURL: URL?,
         selectedURLs: [URL]

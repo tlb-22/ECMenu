@@ -162,16 +162,10 @@ Extension 只在初始化和收到信号时查询，拉取期间的新提示会�
 
 ## 验证与证据范围
 
-- [配置值与 wire 测试](../../../Tests/ECMenuTests/CommandMenuSettings/CommandMenuSettingsTests.swift)：稀疏可见性、总开关、完整顺序的编码恢复与严格验证、版本/必需字段验证。
-- [Controller 测试](../../../Tests/ECMenuTests/CommandMenuSettings/CommandMenuSettingsControllerTests.swift)：发布时已能读到更新偏好；总开关关闭且命令隐藏时仍可排序，每次有效移动保存并发布一次，相同值与恢复不发布。
-- [模板操作测试](../../../Tests/ECMenuTests/NewFileTemplates/Application/FileTemplateOperationsTests.swift)：提交与初始化/管理加载的发布边界；普通缓存查询不产生通知循环。
-- [IPC 测试](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift)与[副本测试](../../../Tests/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)：模板 unavailable 与传输失败的区分、缓存恢复、失败保留、并发提示与旧响应淘汰。
-- [系统状态测试](../../../Tests/ECMenuTests/GeneralSettings/StatusPageSystemStateTests.swift)：禁用规则由当前事实派生，应用缺失或 Extension 状态变化不改写保存值。
+[虚拟机日常验收](../../../Tests/Main.md)使用真实设置页修改总开关、命令可见性与一级顺序，再在 Finder 核对菜单出现、缺失和相对顺序；模板管理与子菜单共同验证模板身份和排序。重开应用后读取持久化值并再次打开菜单，运行报告保存实际点击、拖动与最终结果。
 
-这些定义通过注入边界和独立偏好域验证模块契约，不证明真实分布式通知可靠到达。实机验收应使用当前成对签名产物：修改总开关/Feature 后重新打开 Finder 菜单，管理页加载恢复模板可用性，验证有效空库、模板读取错误、主应用未运行和恢复监听的区别。实际命令仍需确认目标副作用，不能只观察菜单变化。
+总开关关闭后的全部命令缺席需要覆盖完整的有界菜单观察窗口；命令启用检查则等待独立期望标题实际出现。等待、身份与选择复核由[菜单稳定协议](../FinderMenuCapture.md#稳定协议)统一维护，防止把扩展尚未填充的单次菜单快照解释为开关生效。
 
-排序交互的实机验收应覆盖两个面板的手柄拖动、插入位置、原位放下、Esc 与拖出目标后的取消、键盘和辅助功能移动，以及模板长列表的边缘滚动。模板名称编辑中开始拖动后分别完成和取消，核对名称与顺序各自的保存结果；重开应用与 Finder 菜单后，核对一级入口和模板子菜单的相对顺序。已有存储与菜单构建测试不能替代这些原生拖动和系统菜单观察。
+[副本测试](../../../Tests/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)只保留多个刷新信号与旧响应的精确交错，必要性见[单元测试例外](../../../Tests/UnitTestExceptions.md)。测试观察公开的最终配置、模板及缓存，不要求生产暴露内部刷新状态。
 
-通知/偏好完成语义的依据是上述官方契约；既有 Finder 与双向认证观察的 macOS、Xcode 版本及材料限制见[菜单执行验证](MenuExecution.md#实机证据与适用范围)。仓库没有将特定同步耗时或丢失通知恢复率记录为实机保证。
-
-当前代码的自动化与实机执行记录见[架构验证](../Architecture/Verification.md)。
+分布式通知和偏好的完成语义由上述官方契约界定；真实菜单更新并不证明任意通知均可靠到达。配置快照、模板不可用与传输失败的区别，以及长列表、键盘、辅助功能和取消拖动的行为，仅以实际流程报告的执行范围作为当前验收证据。既有带版本的 Finder 与认证观察见[菜单执行验证](MenuExecution.md#实机证据与适用范围)，历史运行标识见[架构验证](../Architecture/Verification.md)。

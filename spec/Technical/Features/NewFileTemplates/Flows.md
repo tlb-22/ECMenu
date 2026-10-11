@@ -284,10 +284,8 @@ sequenceDiagram
 
 ## 验证证据与限制
 
-[应用操作测试](../../../../Tests/ECMenuTests/NewFileTemplates/Application/FileTemplateOperationsTests.swift)覆盖初始化提示一次、普通缓存查询不提示、管理加载/重试提示、内容请求失败前仍发布已发生的初始化，以及打开入口恢复当前索引后调用注入的打开适配。[Controller 测试](../../../../Tests/ECMenuTests/NewFileTemplates/Presentation/FileTemplateControllerTests.swift)覆盖共享初次加载、失败后显式重试、提交失败保持 ready、删除清理失败先显示已删除清单、更换清理失败保持成功。
+[虚拟机日常验收](../../../../Tests/Main.md)在真实模板管理页完成导入、两个名称字段编辑、原生拖动、更换与删除，再从 Finder 子菜单创建文件核对索引顺序、模板身份与内容。真实重开应用检查已提交名称和顺序的恢复；修改源文件后再次创建用于检查保存副本的独立性。
 
-[排序测试](../../../../Tests/ECMenuTests/NewFileTemplates/Presentation/FileTemplateOrderingTests.swift)贯穿 Controller、Operations 与 Library，验证移动到指定项前或末尾、重启恢复、已提交名称与内容引用保留、原位不写不发布，以及提交失败保留原顺序并可重试。该测试不驱动鼠标、滚动或原生名称编辑焦点。
+图标使用[独立 Preview](../../PreviewTarget.md)产生可检查截图，并在真实页面与 Finder 菜单中观察。V05/V06 的返回语义来自 Apple 契约；具体外观取决于当前系统类型与图标资源，既有观察环境见[界面验证记录](../../Architecture/Verification.md#界面与真实-finder)。
 
-图标验收应在独立 Preview 中检查常见、未知和无后缀名称，确认系统图标、默认文件名成功保存后的更新、失败时原图标保持，以及整行拖动。V05/V06 的返回语义来自 Apple 契约；图标具体外观取决于当前系统的类型与图标资源，实机结果及环境见[界面验证记录](../../Architecture/Verification.md#界面与真实-finder)。
-
-提交结果与发布入口的完整测试结果见[验证记录](../../Architecture/Verification.md)。已有真实系统观察见[存储证据](Persistence.md#验证与实机证据)和[原生焦点证据](Editing.md#原生焦点证据与验收)。通知实际到达、默认编辑器真实显示/保存、输入法与窗口切换仍需要对应实机验收。
+提交结果、错误提示与通知同步以本轮实际流程报告为准。已有带版本的系统观察见[存储证据](Persistence.md#验证与实机证据)和[原生焦点证据](Editing.md#原生焦点证据与验收)；默认编辑器保存、输入法和窗口切换结论限定于实际执行的场景。

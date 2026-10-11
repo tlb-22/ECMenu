@@ -1,17 +1,14 @@
 #!/bin/zsh
 
 # 批量启动独立预览场景并生成两种语言的窗口截图。
-# 依据预览进程的就绪与焦点回执完成捕获，管理互斥执行、会话清理和用户焦点恢复。
+# 依据预览进程的就绪与焦点回执完成捕获，管理本轮会话清理。
 
 set -euo pipefail
 
 readonly script_path="${0:A}"
 readonly script_directory="${script_path:h}"
 readonly project_root="${script_directory:h}"
-readonly preview_operation_lock_directory="$project_root/.artifacts/scratch/probes"
-readonly preview_operation_lock="$preview_operation_lock_directory/preview-operation.lock"
 
-source "$script_directory/lib/user-focus.sh"
 source "$script_directory/lib/process-lifecycle.sh"
 
 readonly derived_data_path="$project_root/.derivedData"
@@ -22,6 +19,10 @@ readonly output_directory="$project_root/.artifacts/scratch/previews/$run_timest
 readonly log_directory="$project_root/.artifacts/scratch/logs/$run_timestamp-localized-previews-$$"
 readonly build_log="$log_directory/build.log"
 readonly capture_log="$log_directory/capture.log"
+readonly helper_build_log="$log_directory/helper-build.log"
+readonly helper_executable="$derived_data_path/Build/Products/Debug/FinderMenuAutomation.app/Contents/MacOS/FinderMenuAutomation"
+readonly desktop_job_runner="$project_root/Tests/VirtualMachine/run-desktop-job.py"
+readonly desktop_job_directory="$project_root/.artifacts/scratch/tests/$run_timestamp-preview-capture-$$/desktop-jobs"
 readonly developer_directory="${DEVELOPER_DIR:-/Applications/Xcode.app/Contents/Developer}"
 readonly destination="${XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 readonly -a languages=(en zh-Hans)
@@ -277,11 +278,8 @@ capture_preview() {
         fail "Preview did not report a ready window: $preview_name. Details: $stderr_log"
     fi
 
-    if /usr/sbin/screencapture \
-        -x \
-        -o \
-        -l "$window_id" \
-        "$image_path" \
+    if python3 "$desktop_job_runner" "$desktop_job_directory/$preview_name" -- \
+        "$helper_executable" window-image "$window_id" "$image_path" \
         >>"$capture_log" 2>&1; then
         :
     else
@@ -321,19 +319,8 @@ capture_preview() {
 
 parse_arguments "$@"
 
-ecmenu_reexec_preserving_user_focus "$script_path" "$@"
-
-if [[ "${ECMENU_PREVIEW_OPERATION_LOCK:-}" != "$preview_operation_lock" ]]; then
-    mkdir -p "$preview_operation_lock_directory"
-    exec /usr/bin/lockf \
-        -k \
-        -t 0 \
-        "$preview_operation_lock" \
-        /usr/bin/env \
-        ECMENU_PREVIEW_OPERATION_LOCK="$preview_operation_lock" \
-        "$script_path" \
-        "$@"
-fi
+source "$script_directory/lib/test-vm.sh"
+ecmenu_run_in_test_vm previews "$@"
 
 trap cleanup EXIT
 trap 'exit 129' HUP
@@ -359,6 +346,29 @@ else
     tail -n 200 "$build_log" >&2
     exit "$build_status"
 fi
+
+if DEVELOPER_DIR="$developer_directory" xcodebuild \
+    -project ECMenu.xcodeproj -scheme FinderMenuAutomation -configuration Debug \
+    -destination "$destination" -derivedDataPath "$derived_data_path" build -quiet \
+    >"$helper_build_log" 2>&1; then
+    :
+else
+    fail "Could not build the signed desktop screenshot driver. Details: $helper_build_log"
+fi
+source "$script_directory/lib/product-paths.sh"
+source "$script_directory/lib/code-signing.sh"
+ecmenu_resolve_product_paths "$derived_data_path/Build/Products/Debug" \
+    || fail "Could not resolve the actual Debug product for screenshot signing."
+codesign --verify --strict "$helper_executable" 2>>"$helper_build_log" \
+    || fail "Desktop screenshot driver signature is invalid."
+readonly helper_team="$(ecmenu_code_signing_value "$helper_executable" TeamIdentifier)"
+[[ -n "$helper_team" && "$helper_team" != not\ set \
+    && "$(ecmenu_code_signing_value "$helper_executable" Identifier)" == com.axiomace.ecmenu.test.findermenuautomation \
+    && "$(ecmenu_code_signing_value "$ECMENU_PRODUCT_APP_PATH" TeamIdentifier)" == "$helper_team" ]] \
+    || fail "Desktop screenshot driver requires the actual product's real signing team."
+python3 "$desktop_job_runner" "$desktop_job_directory/permissions" -- \
+    "$helper_executable" permissions >>"$capture_log" 2>&1 \
+    || fail "The project template requires desktop screenshot driver permissions."
 
 if preview_ids_text="$("$preview_executable" --list 2>>"$capture_log")"; then
     :

@@ -15,31 +15,76 @@ struct FinderMenuAutomationMain {
             let command = try CLICommand.parse(Array(CommandLine.arguments.dropFirst()))
             switch command {
             case .preflight:
+                try DesktopUI.requireVirtualMachine()
                 let permissions = PermissionReport.current(requestIfNeeded: true)
                 ProtocolOutput.preflight(permissions)
                 Darwin.exit(permissions.isReady ? EXIT_SUCCESS : EXIT_FAILURE)
+            case .permissions:
+                let permissions = PermissionReport.current()
+                ProtocolOutput.preflight(permissions)
+                Darwin.exit(permissions.isReady ? EXIT_SUCCESS : EXIT_FAILURE)
+            case let .prepareCapture(output):
+                _ = NSApplication.shared.setActivationPolicy(.accessory)
+                NSApplication.shared.finishLaunching()
+                try await CapturePermissionPreparation.run(output: output)
+                Darwin.exit(EXIT_SUCCESS)
+            case let .prepareExternalApplications(output):
+                _ = NSApplication.shared.setActivationPolicy(.accessory)
+                NSApplication.shared.finishLaunching()
+                try await ExternalApplicationPreparation.run(output: output)
+                ProtocolOutput.line("EXTERNAL_APPLICATIONS\tprepared")
+                Darwin.exit(EXIT_SUCCESS)
+            case let .desktopSuite(input):
+                _ = NSApplication.shared.setActivationPolicy(.accessory)
+                NSApplication.shared.finishLaunching()
+                let status = try await DesktopAcceptanceSuite(input: input).run()
+                ProtocolOutput.line("DESKTOP_SUITE\t\(status.rawValue)")
+                Darwin.exit(EXIT_SUCCESS)
+            case let .prepareReadmeTemplates(input):
+                _ = NSApplication.shared.setActivationPolicy(.accessory)
+                NSApplication.shared.finishLaunching()
+                try await ReadmeTemplateFixture.prepare(input)
+                ProtocolOutput.line("README_TEMPLATES\tprepared")
+                Darwin.exit(EXIT_SUCCESS)
             case .finderWindows:
+                try DesktopUI.requireVirtualMachine()
                 let permissions = PermissionReport.current()
                 guard permissions.isReady else { throw AutomationFailure.permissions(permissions) }
                 ProtocolOutput.finderWindows(try FinderWindowInventory.currentCount())
                 Darwin.exit(EXIT_SUCCESS)
+            case let .windowImage(input):
+                try DesktopUI.requireVirtualMachine()
+                let permissions = PermissionReport.current()
+                guard permissions.isReady else { throw AutomationFailure.permissions(permissions) }
+                _ = NSApplication.shared.setActivationPolicy(.accessory)
+                NSApplication.shared.finishLaunching()
+                try await MenuScreenshot.captureWindow(number: input.number, to: input.outputURL)
+                ProtocolOutput.line("WINDOW_IMAGE\t\(input.number)")
+                Darwin.exit(EXIT_SUCCESS)
             case let .capture(input, content):
-                await capture(context: input.context) { session, rootMenu in
+                let requiredTitles: Set<String> = switch content {
+                case .menu: []
+                case let .submenu(parentTitle): [parentTitle]
+                }
+                await capture(context: input.context, requiredTitles: requiredTitles) { session, rootMenu in
                     switch content {
                     case .menu:
                         try await MenuScreenshot.capture(rootMenu, to: input.outputURL)
                         try session.verifyAfterCapture()
                     case let .submenu(parentTitle):
-                        let submenu = try session.prepareSubmenu(parentTitle: parentTitle)
+                        let submenu = try await session.prepareSubmenu(parentTitle: parentTitle)
                         try await MenuScreenshot.capture(
                             root: rootMenu, submenu: submenu.snapshot, to: input.outputURL
                         )
                         try session.verifySubmenu(submenu)
+                        for title in submenu.snapshot.titles where !title.isEmpty {
+                            ProtocolOutput.line("SUBITEM\t\(Data(title.utf8).base64EncodedString())")
+                        }
                     }
                     return rootMenu
                 }
             case let .createFile(acceptance):
-                await capture(context: acceptance.input.context) { session, _ in
+                await capture(context: acceptance.input.context, requiredTitles: [acceptance.parentTitle]) { session, _ in
                     let snapshot = try await acceptance.run(in: session)
                     ProtocolOutput.line(
                         "CREATED\t\(Data(acceptance.expectedFileURL.path.utf8).base64EncodedString())"
@@ -55,15 +100,17 @@ struct FinderMenuAutomationMain {
 
     private static func capture(
         context: FinderMenuContext,
+        requiredTitles: Set<String>,
         operation: (FinderMenuSession, MenuSnapshot) async throws -> MenuSnapshot
     ) async -> Never {
         let session = FinderMenuSession(context: context)
         do {
+            try DesktopUI.requireVirtualMachine()
             let permissions = PermissionReport.current()
             guard permissions.isReady else { throw AutomationFailure.permissions(permissions) }
             _ = NSApplication.shared.setActivationPolicy(.accessory)
             NSApplication.shared.finishLaunching()
-            let rootMenu = try session.prepare()
+            let rootMenu = try session.prepare(requiredTitles: requiredTitles)
             let capturedMenu = try await operation(session, rootMenu)
             try session.closeOwnedUI()
             ProtocolOutput.captured(capturedMenu)

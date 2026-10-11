@@ -1,0 +1,11 @@
+{
+  "name": "ecmenu-vm-permission-bootstrap",
+  "version": "1.0.0",
+  "private": true,
+  "description": "仅为项目虚拟机模板准备原生测试驱动权限；日常验收使用 Swift 驱动。",
+  "engines": { "node": "24.21.0" },
+  "devDependencies": {
+    "appium": "3.8.0",
+    "appium-mac2-driver": "4.3.6"
+  }
+}

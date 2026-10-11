@@ -120,8 +120,8 @@ sequenceDiagram
 
 项目观察（2026-09-08，macOS 26.6.2、Xcode 26.6）：对已经编辑的 `NSTextField` 调用 `selectText` 恢复选择时，可能同步产生结束编辑通知。因此程序化恢复期间仍属于当前交接，不能将该通知再次解释为用户离开字段。这是特定系统上的项目验证结果，不是所有 macOS 版本的通知顺序保证。
 
-[会话测试](../../../../Tests/ECMenuTests/NewFileTemplates/Presentation/FileTemplateNameEditingSessionTests.swift)覆盖最后目标、同步重入、准备提交时的最新文字、失败恢复、单次失败反馈与取消；[草稿测试](../../../../Tests/ECMenuTests/NewFileTemplates/Presentation/FileTemplateNameDraftTests.swift)覆盖未变值不写和重复提交一次；[单字段更新测试](../../../../Tests/ECMenuTests/NewFileTemplates/Presentation/FileTemplateNameUpdateTests.swift)覆盖另一字段最新值和按 ID 更新；[隐藏窗口中的原生页面测试](../../../../Tests/ECMenuTests/NewFileTemplates/Presentation/NewFileTemplateSettingsPageTests.swift)覆盖控件身份、鼠标/键盘焦点、跨页面操作占用、背景点击和失败阻止文件操作。测试宿主的能力限制见[界面预览目标](../../PreviewTarget.md)。
+[虚拟机日常验收](../../../../Tests/Main.md)对真实模板页发送鼠标和键盘输入，以实际聚焦字段、保存后的索引、Finder 子菜单及创建内容共同核对名称交接。点击未聚焦、输入进入错误字段或持久化结果不符均属于失败；固定内存的 [Preview](../../PreviewTarget.md)仅承担截图与交互诊断。
 
-2026-09-08 当前结构完整 231 项测试通过，包含上述原生控件、异步交接、提交结果与页面会话测试，详见[验证记录](../../Architecture/Verification.md)。隐藏窗口自动化不等于真实输入法与所有窗口场景的实机验收。
+已有隐藏窗口实验与真实 Preview 点击的结果限定于相应日期、代码和系统版本，详见[验证记录](../../Architecture/Verification.md)。当前源码的输入法与窗口场景结论以真实流程报告中的实际执行范围为准。
 
 实机复核应在打开的文件模板页使用真实输入法，连续验证“输入中切字段、Return/Tab/Shift-Tab、保存期间再次点另一字段、保存失败继续修正、切分类和切前台应用、名称尚未完成时点文件操作”。观察应同时记录最终持久化值、原生焦点/选区和后续操作是否发生；仅看到正确文本不足以证明焦点或任务生命周期正确。

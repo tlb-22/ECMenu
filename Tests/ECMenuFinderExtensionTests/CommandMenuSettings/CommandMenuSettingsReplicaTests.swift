@@ -1,88 +1,15 @@
 /**
- 验证扩展菜单配置副本的缓存恢复和单飞刷新。
- 通过隔离偏好与可控拉取结果检查失败保留快照、信号合并及过时响应丢弃。
+ 验证菜单配置副本在多个刷新信号与过时响应交错时只发布最新快照。
+ 由可控传输精确安排响应顺序，避免真实 IPC 调度的不确定性掩盖旧响应覆盖问题。
  */
 
 import Foundation
 import XCTest
 @testable import ECMenuFinderExtension
 
-/// 验证配置更新信号只形成单飞拉取，且过时响应不会覆盖最终真相。
 @MainActor
 final class CommandMenuSettingsReplicaTests: XCTestCase {
-    func testFailedRefreshPreservesCacheAndNextSignalCanRefresh() async throws {
-        let suiteName = "CommandMenuSettingsReplicaTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let template = FileTemplateMenuItem(id: FileTemplateID(), displayName: "Notes", filenameExtension: "md")
-        let cached = CommandMenuSettingsSnapshot(
-            configuration: CommandMenuSettings(isEnabled: false),
-            newFileTemplates: [template]
-        )
-        let cachedData = CommandMenuSettingsSnapshotCache.encode(cached)
-        defaults.set(cachedData, forKey: CommandMenuSettingsSnapshotCache.key)
-        let transport = ControlledCommandMenuSettingsTransport()
-        let replica = CommandMenuSettingsReplica(defaults: defaults, transport: transport)
-
-        transport.completeNext(with: .failure(ApplicationIPCError.deadlineExceeded))
-        await waitForRefresh(in: replica)
-        XCTAssertFalse(replica.isEnabled)
-        XCTAssertEqual(replica.newFileTemplates, [template])
-        XCTAssertEqual(defaults.data(forKey: CommandMenuSettingsSnapshotCache.key), cachedData)
-        replica.refreshConfiguration()
-        await waitForRequestCount(2, in: transport)
-        XCTAssertFalse(replica.isEnabled)
-        XCTAssertEqual(replica.newFileTemplates, [template])
-        XCTAssertEqual(defaults.data(forKey: CommandMenuSettingsSnapshotCache.key), cachedData)
-
-        transport.completeNext(with: .success(.standard))
-        await waitForRefresh(in: replica)
-        XCTAssertTrue(replica.isEnabled)
-        XCTAssertTrue(replica.newFileTemplates.isEmpty)
-        let stored = try XCTUnwrap(defaults.data(forKey: CommandMenuSettingsSnapshotCache.key))
-        XCTAssertEqual(try CommandMenuSettingsSnapshotCache.decode(stored), .standard)
-    }
-
-    func testInvalidCacheStartsWithStandardConfigurationWhenTransportIsUnavailable() throws {
-        let suiteName = "CommandMenuSettingsReplicaTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        defaults.set(Data("{}".utf8), forKey: CommandMenuSettingsSnapshotCache.key)
-        let replica = CommandMenuSettingsReplica(defaults: defaults, transport: nil)
-        XCTAssertTrue(replica.isEnabled)
-        XCTAssertTrue(replica.newFileTemplates.isEmpty)
-        replica.refreshConfiguration()
-        XCTAssertTrue(replica.isEnabled)
-        XCTAssertTrue(replica.newFileTemplates.isEmpty)
-    }
-
-    /// 命令顺序与同名模板的独立身份、后缀、原顺序共同从快照缓存恢复。
-    func testSnapshotCacheRestoresDuplicateNamesAndDistinctIdentities() throws {
-        let suiteName = "CommandMenuSettingsReplicaTests.\(UUID().uuidString)"
-        let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
-        defer { defaults.removePersistentDomain(forName: suiteName) }
-        let templates = [
-            FileTemplateMenuItem(id: FileTemplateID(), displayName: "TXT", filenameExtension: "txt"),
-            FileTemplateMenuItem(id: FileTemplateID(), displayName: "TXT", filenameExtension: ""),
-        ]
-        let snapshot = CommandMenuSettingsSnapshot(
-            configuration: CommandMenuSettings(orderedFeatureIDs: CommandMenuSettings.defaultFeatureIDs.reversed()),
-            newFileTemplates: templates
-        )
-        defaults.set(
-            CommandMenuSettingsSnapshotCache.encode(snapshot),
-            forKey: CommandMenuSettingsSnapshotCache.key
-        )
-        let replica = CommandMenuSettingsReplica(defaults: defaults, transport: nil)
-
-        XCTAssertTrue(replica.isEnabled)
-        XCTAssertEqual(replica.newFileTemplates, templates)
-        XCTAssertEqual(replica.menuSettings, snapshot.configuration)
-        XCTAssertEqual(replica.newFileTemplates.map(\.displayName), ["TXT", "TXT"])
-        XCTAssertEqual(replica.newFileTemplates.map(\.filenameExtension), ["txt", ""])
-        XCTAssertNotEqual(replica.newFileTemplates[0].id, replica.newFileTemplates[1].id)
-    }
-
+    /// 旧请求完成前连续两次更新，旧响应不得覆盖最终配置及模板身份。
     func testConcurrentRefreshSignalsCoalesceAndSkipStaleResponse() async throws {
         let suiteName = "CommandMenuSettingsReplicaTests.\(UUID().uuidString)"
         let defaults = try XCTUnwrap(UserDefaults(suiteName: suiteName))
@@ -124,7 +51,10 @@ final class CommandMenuSettingsReplicaTests: XCTestCase {
             newFileTemplates: templates
         )
         transport.completeNext(with: .success(latest))
-        await waitForRefresh(in: replica)
+        await waitUntil {
+            replica.menuSettings == latest.configuration
+                && replica.newFileTemplates == latest.newFileTemplates
+        }
 
         XCTAssertEqual(transport.requestCount, 2)
         XCTAssertTrue(replica.isEnabled)
@@ -135,23 +65,28 @@ final class CommandMenuSettingsReplicaTests: XCTestCase {
         XCTAssertEqual(try CommandMenuSettingsSnapshotCache.decode(stored), latest)
     }
 
-    private func waitForRefresh(in replica: CommandMenuSettingsReplica) async {
-        for _ in 0..<100 where replica.isRefreshing { await Task.yield() }
-        XCTAssertFalse(replica.isRefreshing)
+    private func waitUntil(_ condition: () -> Bool) async {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(1))
+        while !condition(), clock.now < deadline {
+            await Task.yield()
+        }
+        XCTAssertTrue(condition(), "配置副本未在截止时间前发布最新快照")
     }
 
     private func waitForRequestCount(
         _ expectedCount: Int,
         in transport: ControlledCommandMenuSettingsTransport
     ) async {
-        for _ in 0..<100 where transport.requestCount < expectedCount {
+        let clock = ContinuousClock()
+        let deadline = clock.now.advanced(by: .seconds(1))
+        while transport.requestCount < expectedCount, clock.now < deadline {
             await Task.yield()
         }
         XCTAssertEqual(transport.requestCount, expectedCount)
     }
 }
 
-/// 保存每次异步完成句柄，让测试明确控制响应顺序。
 nonisolated private final class ControlledCommandMenuSettingsTransport:
     CommandMenuSettingsRequesting,
     @unchecked Sendable

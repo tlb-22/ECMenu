@@ -15,7 +15,7 @@ final class FinderMenuSession {
     }
 
     private struct ResolvedItem {
-        let directChild: AXUIElement
+        let itemScope: AXUIElement
         let menuElement: AXUIElement
     }
 
@@ -25,7 +25,6 @@ final class FinderMenuSession {
         let firstItem: ResolvedItem
         let remainingItems: [ResolvedItem]
 
-        var items: [ResolvedItem] { [firstItem] + remainingItems }
     }
 
     private struct SelectionOwnerCandidate {
@@ -35,7 +34,7 @@ final class FinderMenuSession {
 
     private struct VerifiedSelection {
         let owner: AXUIElement
-        let children: [AXUIElement]
+        let urls: [URL]
     }
 
     private enum MenuObservation {
@@ -69,12 +68,14 @@ final class FinderMenuSession {
     private let context: FinderMenuContext
     private var finder: NSRunningApplication?
     private var state: State = .initialized
+    private var actionWindowBaseline: [AXUIElement] = []
+    private var resultWindows: [AXUIElement] = []
 
     init(context: FinderMenuContext) {
         self.context = context
     }
 
-    func prepare() throws -> MenuSnapshot {
+    func prepare(requiredTitles: Set<String> = []) throws -> MenuSnapshot {
         let finder = try waitForFinder()
         self.finder = finder
         let application = AXUIElementCreateApplication(finder.processIdentifier)
@@ -127,7 +128,7 @@ final class FinderMenuSession {
 
         state = .menuOpened(application, resolvedContext.window, menu, selection)
         try movePointerOutsideMenu(menu, within: resolvedContext.window)
-        let snapshot = try waitForStableMenu(menu)
+        let snapshot = try waitForStableMenu(menu, requiredTitles: requiredTitles)
         try verifySelection(selection)
         state = .menuReady(
             application,
@@ -137,6 +138,29 @@ final class FinderMenuSession {
             snapshot
         )
         return snapshot
+    }
+
+    /// 缺席断言观察完整菜单等待窗口，避免把扩展尚未填充的原生菜单误判为成功。
+    func observeAbsentItems(named titles: Set<String>) throws -> MenuSnapshot {
+        guard case let .menuReady(application, window, menu, selection, _) = state else {
+            preconditionFailure("Absence verification requires a prepared menu")
+        }
+        let deadline = Date().addingTimeInterval(AutomationTiming.menu)
+        var latest: MenuSnapshot
+        repeat {
+            try verifySelection(selection)
+            guard case let .ready(snapshot) = try observeMenu(menu) else {
+                throw AutomationFailure.menuChanged
+            }
+            if let unexpected = snapshot.titles.first(where: { titles.contains($0) }) {
+                throw AutomationFailure.menuItemUnexpected(unexpected)
+            }
+            latest = snapshot
+            runLoopSlice(AutomationTiming.poll)
+        } while Date() < deadline
+        state = .menuReady(application, window, menu, selection, latest)
+        try verifyAfterCapture()
+        return latest
     }
 
     func verifyAfterCapture() throws {
@@ -184,47 +208,29 @@ final class FinderMenuSession {
     }
 
     /// 悬停指定父菜单，并等待其直接子菜单完成布局。
-    func prepareSubmenu(parentTitle: String) throws -> Submenu {
+    func prepareSubmenu(parentTitle: String) async throws -> Submenu {
         try verifyAfterCapture()
-        guard case let .menuReady(application, _, rootMenu, _, _) = state,
-              let finder else {
+        guard case let .menuReady(_, _, rootMenu, _, _) = state else {
             preconditionFailure("A verified capture requires a prepared menu")
         }
         let parent = try uniqueMenuItem(named: parentTitle, in: rootMenu)
-        let waiter = try AXElementNotificationWaiter(
-            processIdentifier: finder.processIdentifier,
-            application: application,
-            notification: kAXMenuOpenedNotification as CFString
-        )
         try FinderPointer.move(to: FinderPointer.location(of: parent))
-        guard let submenu = try waiter.wait(
-            timeout: AutomationTiming.menu,
-            resolve: { openedMenus -> AXUIElement? in
-                for candidate in try AXClient.elements(
-                    kAXChildrenAttribute as CFString,
-                    of: parent
-                ) where try AXClient.string(
-                    kAXRoleAttribute as CFString,
-                    of: candidate
-                ) == kAXMenuRole as String {
-                    guard openedMenus.contains(where: {
-                        AXClient.same($0, candidate)
-                    }) else {
-                        continue
-                    }
-                    if case .ready = try self.observeMenu(candidate) {
-                        return candidate
-                    }
+        let deadline = Date().addingTimeInterval(AutomationTiming.menu)
+        while true {
+            for candidate in try AXClient.elements(
+                kAXChildrenAttribute as CFString, of: parent
+            ) where try AXClient.string(kAXRoleAttribute as CFString, of: candidate) == kAXMenuRole as String {
+                if case .ready = try observeMenu(candidate) {
+                    let submenu = Submenu(element: candidate, snapshot: try waitForStableMenu(candidate))
+                    // 打开通知未必对应当前 AX 子菜单对象；以真实可见窗口和不变的快照为准。
+                    try await MenuScreenshot.requireVisible(submenu.snapshot)
+                    try verifySubmenu(submenu)
+                    return submenu
                 }
-                return nil
             }
-        ) else {
-            throw AutomationFailure.menuItemUnavailable(parentTitle)
+            guard Date() < deadline else { throw AutomationFailure.menuItemUnavailable(parentTitle) }
+            runLoopSlice(AutomationTiming.poll)
         }
-        return Submenu(
-            element: submenu,
-            snapshot: try waitForStableMenu(submenu)
-        )
     }
 
     /// 验证父菜单、来源选择和子菜单在截图期间均未改变。
@@ -246,24 +252,79 @@ final class FinderMenuSession {
         guard try AXClient.supports(kAXPressAction as CFString, on: item) else {
             throw AutomationFailure.menuItemUnavailable(title)
         }
+        actionWindowBaseline = try AXClient.elements(kAXWindowsAttribute as CFString, of: application)
         try AXClient.perform(kAXPressAction as CFString, on: item)
         state = .window(application, window)
     }
 
+    /// 点击一级菜单的唯一启用项；验收调用方随后核对真实系统输出。
+    func pressItem(named title: String) throws {
+        try verifyAfterCapture()
+        guard case let .menuReady(application, window, menu, _, _) = state else {
+            preconditionFailure("A verified action requires a prepared menu")
+        }
+        let item = try uniqueMenuItem(named: title, in: menu)
+        actionWindowBaseline = try AXClient.elements(kAXWindowsAttribute as CFString, of: application)
+        try AXClient.perform(kAXPressAction as CFString, on: item)
+        state = .window(application, window)
+    }
+
+    /// 读取点击菜单前的 AX 选择事实；数组顺序不作为 FinderSync 返回顺序的契约。
+    func selectedURLsBeforeAction() throws -> [URL] {
+        try verifyAfterCapture()
+        guard case let .menuReady(_, _, _, selection, _) = state else {
+            preconditionFailure("Selection observation requires a prepared menu")
+        }
+        return try selectedURLs(on: selection.owner)
+    }
+
+    /// 在同一来源窗口及选择上执行 Finder 自身的拷贝路径名命令，供独立对照。
+    func copySelectedPathnamesUsingFinder() throws {
+        guard case let .window(application, window) = state else {
+            preconditionFailure("Native path comparison requires a completed menu action")
+        }
+        guard try finderWindowIsFocused(window, application: application),
+              let resolved = try resolveContext(in: window) else {
+            throw AutomationFailure.focusLost("Finder source changed before native path comparison")
+        }
+        try verifySelection(VerifiedSelection(owner: resolved.selectionOwner, urls: context.selectedURLs))
+        guard let command = try menuCommand(character: "c", modifiers: Int(AXMenuItemModifiers.option.rawValue),
+                                            application: application),
+              try AXClient.bool(kAXEnabledAttribute as CFString, of: command.element) == true else {
+            throw AutomationFailure.menuItemUnavailable("Finder Copy as Pathname")
+        }
+        try AXClient.perform(kAXPressAction as CFString, on: command.element)
+    }
+
     /// 读取会话拥有的窗口是否仅选中指定 URL；选择容器随 Finder 更新重新解析。
     func isSoleSelectedItem(_ url: URL) throws -> Bool {
-        guard case let .window(_, window) = state else {
+        try hasExactlySelectedItems([url])
+    }
+
+    /// 比较来源窗口或动作新建的结果窗口中，Finder 实际选中的完整 URL 集合。
+    func hasExactlySelectedItems(_ urls: [URL]) throws -> Bool {
+        guard case let .window(application, window) = state else {
             preconditionFailure("Result selection requires a completed menu action")
         }
-        guard let resolved = try resolveContext(in: window) else { return false }
-        let selected = try AXClient.elements(
-            kAXSelectedChildrenAttribute as CFString,
-            of: resolved.selectionOwner
-        )
-        guard selected.count == 1 else { return false }
-        let elements = [selected[0]] + (try AXTree.paths(below: selected[0]))
-            .map(\.element)
-        return try elements.contains(where: { try AXClient.url(of: $0) == url })
+        precondition(!urls.isEmpty, "A result selection requires at least one URL")
+        let windows = try AXClient.elements(kAXWindowsAttribute as CFString, of: application)
+        let eligible = windows.filter { candidate in
+            AXClient.same(candidate, window) || !actionWindowBaseline.contains { AXClient.same($0, candidate) }
+        }
+        var matches: [AXUIElement] = []
+        for candidate in eligible {
+            guard let resolved = try resolveContext(in: candidate, representing: urls) else { continue }
+            let actual = try selectedURLs(on: resolved.selectionOwner)
+            if actual.count == urls.count && Set(actual.map(\.path)) == Set(urls.map(\.path)) {
+                matches.append(candidate)
+            }
+        }
+        guard matches.count <= 1 else { throw AutomationFailure.finderWindowOwnershipAmbiguous }
+        guard let result = matches.first else { return false }
+        if !AXClient.same(result, window), !resultWindows.contains(where: { AXClient.same($0, result) }) {
+            resultWindows.append(result)
+        }
+        return true
     }
 
     private func uniqueMenuItem(named title: String, in menu: AXUIElement) throws -> AXUIElement {
@@ -327,6 +388,14 @@ final class FinderMenuSession {
                 if firstFailure == nil { firstFailure = failure }
             }
         }
+        for resultWindow in resultWindows {
+            do {
+                try closeWindow(resultWindow, application: application)
+            } catch let failure as AutomationFailure {
+                if firstFailure == nil { firstFailure = failure }
+            }
+        }
+        resultWindows.removeAll()
         do {
             try closeWindow(window, application: application)
             state = .finished
@@ -555,6 +624,8 @@ final class FinderMenuSession {
                 continue
             }
             guard AXClient.same(focusedWindow, ownedWindow) else {
+                FinderNavigationEvidence.record(stage: .focusChanged, window: window,
+                                                application: application, context: context)
                 throw AutomationFailure.focusLost(
                     "Finder focused another window while navigating."
                 )
@@ -566,6 +637,8 @@ final class FinderMenuSession {
             }
             runLoopSlice(AutomationTiming.poll)
         }
+        FinderNavigationEvidence.record(stage: .contextTimeout, window: window,
+                                        application: application, context: context)
         throw AutomationFailure.finderOpenFailed(directory.path)
     }
 
@@ -588,8 +661,8 @@ final class FinderMenuSession {
         return AXClient.same(sheetWindow, window)
     }
 
-    private func resolveContext(in window: AXUIElement) throws -> ResolvedContext? {
-        let requestedURLs = context.representedURLs
+    private func resolveContext(in window: AXUIElement, representing urls: [URL]? = nil) throws -> ResolvedContext? {
+        let requestedURLs = urls ?? context.representedURLs
         let paths = try AXTree.paths(below: window)
         var candidates: [SelectionOwnerCandidate] = []
 
@@ -606,20 +679,14 @@ final class FinderMenuSession {
                         on: owner
                     ) else { continue }
 
-                    let directChild = ancestorIndex == 0
-                        ? path.element
-                        : path.ancestors[ancestorIndex - 1]
-                    let ownerChildren = try AXClient.elements(
-                        kAXChildrenAttribute as CFString,
-                        of: owner
-                    )
-                    guard ownerChildren.contains(where: {
-                        AXClient.same($0, directChild)
-                    }) else { continue }
-
                     let itemElements = path.elementAndAncestors.prefix(
                         ancestorIndex + 1
                     )
+                    guard let itemScope = try itemElements.reversed().first(where: { element in
+                        let urls = Set(try ([element] + AXTree.paths(below: element).map(\.element))
+                            .compactMap { try AXClient.url(of: $0)?.path })
+                        return urls == [requestedURL.path]
+                    }) else { continue }
                     guard let menuElement = try itemElements.first(where: {
                         try AXClient.supports(
                             kAXShowMenuAction as CFString,
@@ -628,14 +695,14 @@ final class FinderMenuSession {
                     }) else { continue }
 
                     let item = ResolvedItem(
-                        directChild: directChild,
+                        itemScope: itemScope,
                         menuElement: menuElement
                     )
                     if let candidateIndex = candidates.firstIndex(where: {
                         AXClient.same($0.owner, owner)
                     }) {
                         if !candidates[candidateIndex].itemsByURL[urlIndex].contains(where: {
-                            AXClient.same($0.directChild, directChild)
+                            AXClient.same($0.itemScope, itemScope)
                         }) {
                             candidates[candidateIndex].itemsByURL[urlIndex].append(item)
                         }
@@ -662,7 +729,7 @@ final class FinderMenuSession {
             guard let firstItem = items.first else { return nil }
             for (index, item) in items.enumerated() {
                 guard !items.dropFirst(index + 1).contains(where: {
-                    AXClient.same($0.directChild, item.directChild)
+                    AXClient.same($0.itemScope, item.itemScope)
                 }) else { return nil }
             }
             return ResolvedContext(
@@ -905,17 +972,14 @@ final class FinderMenuSession {
         in resolved: ResolvedContext,
         application: AXUIElement
     ) throws -> VerifiedSelection {
-        let expectedChildren: [AXUIElement]
         switch context {
         case .container:
-            expectedChildren = []
             try AXClient.setValue(
-                expectedChildren as CFArray,
+                [] as CFArray,
                 for: kAXSelectedChildrenAttribute as CFString,
                 on: resolved.selectionOwner
             )
-        case .items:
-            expectedChildren = resolved.items.map(\.directChild)
+        case let .items(selection):
             if resolved.remainingItems.isEmpty {
                 try click(
                     resolved.firstItem,
@@ -929,40 +993,54 @@ final class FinderMenuSession {
                     application: application
                 )
                 try waitForSelection(
-                    [resolved.firstItem.directChild],
+                    [selection.first],
                     on: resolved.selectionOwner
                 )
-                try selectAllItems(in: resolved, application: application)
+                var selected = [selection.first]
+                for (index, item) in resolved.remainingItems.enumerated() {
+                    try click(item, in: resolved, application: application, flags: .maskCommand)
+                    selected.append(selection.remaining[index])
+                    try waitForSelection(selected, on: resolved.selectionOwner)
+                }
             }
         }
 
-        try waitForSelection(expectedChildren, on: resolved.selectionOwner)
+        try waitForSelection(context.selectedURLs, on: resolved.selectionOwner)
         return VerifiedSelection(
             owner: resolved.selectionOwner,
-            children: expectedChildren
+            urls: context.selectedURLs
         )
     }
 
     private func waitForSelection(
-        _ expectedChildren: [AXUIElement],
+        _ expectedURLs: [URL],
         on owner: AXUIElement
     ) throws {
         let deadline = Date().addingTimeInterval(AutomationTiming.target)
         while Date() < deadline {
-            let actualChildren = try AXClient.elements(
-                kAXSelectedChildrenAttribute as CFString,
-                of: owner
-            )
-            if sameElements(actualChildren, expectedChildren) { return }
+            let actual = try selectedURLs(on: owner)
+            if actual.count == expectedURLs.count && Set(actual.map(\.path)) == Set(expectedURLs.map(\.path)) { return }
             runLoopSlice(AutomationTiming.poll)
         }
+        let actualChildren = try AXClient.elements(kAXSelectedChildrenAttribute as CFString, of: owner)
+        func facts(_ children: [AXUIElement]) throws -> [[String: String]] {
+            try children.map { child in
+                let urls = try ([child] + AXTree.paths(below: child).map(\.element)).compactMap { try AXClient.url(of: $0)?.path }
+                return ["role": try AXClient.string(kAXRoleAttribute as CFString, of: child) ?? "",
+                        "title": try AXClient.string(kAXTitleAttribute as CFString, of: child) ?? "",
+                        "urls": urls.joined(separator: "\n")]
+            }
+        }
+        let evidence = try JSONSerialization.data(withJSONObject: ["expectedURLs": expectedURLs.map(\.path), "actual": facts(actualChildren)])
+        FileHandle.standardOutput.write(Data("SELECTION_FAILURE\t\(evidence.base64EncodedString())\n".utf8))
         throw AutomationFailure.finderSelectionTimeout
     }
 
     private func click(
         _ item: ResolvedItem,
         in resolved: ResolvedContext,
-        application: AXUIElement
+        application: AXUIElement,
+        flags: CGEventFlags = []
     ) throws {
         try verifySelectionFocus(in: resolved, application: application)
 
@@ -971,35 +1049,15 @@ final class FinderMenuSession {
             at: location,
             in: AXUIElementCreateSystemWide()
         )
-        guard try isDescendant(hitElement, of: item.directChild) else {
+        guard try isDescendant(hitElement, of: item.itemScope) else {
+            FinderNavigationEvidence.record(stage: .selectionHitMismatch, window: resolved.window,
+                application: application, context: context, hit: hitElement,
+                itemScope: item.itemScope, menuTarget: item.menuElement)
             throw AutomationFailure.focusLost(
                 "The Finder item was obscured before selection."
             )
         }
-        try FinderPointer.click(at: location)
-    }
-
-    private func selectAllItems(
-        in resolved: ResolvedContext,
-        application: AXUIElement
-    ) throws {
-        try verifySelectionFocus(in: resolved, application: application)
-        let ownerChildren = try AXClient.elements(
-            kAXChildrenAttribute as CFString,
-            of: resolved.selectionOwner
-        )
-        let scenarioChildren = resolved.items.map(\.directChild)
-        guard sameElements(ownerChildren, scenarioChildren) else {
-            throw AutomationFailure.finderSelectAllScopeMismatch
-        }
-        guard let command = try menuCommand(
-            character: "a",
-            modifiers: MenuCommandModifiers.commandOnly,
-            application: application
-        ), try AXClient.supports(kAXPressAction as CFString, on: command.element) else {
-            throw AutomationFailure.finderSelectAllUnavailable
-        }
-        try AXClient.perform(kAXPressAction as CFString, on: command.element)
+        try FinderPointer.click(at: location, flags: flags)
     }
 
     private func verifySelectionFocus(
@@ -1036,12 +1094,19 @@ final class FinderMenuSession {
     }
 
     private func verifySelection(_ selection: VerifiedSelection) throws {
-        let actualChildren = try AXClient.elements(
-            kAXSelectedChildrenAttribute as CFString,
-            of: selection.owner
-        )
-        guard sameElements(actualChildren, selection.children) else {
+        let actual = try selectedURLs(on: selection.owner)
+        guard actual.count == selection.urls.count && Set(actual.map(\.path)) == Set(selection.urls.map(\.path)) else {
             throw AutomationFailure.finderSelectionTimeout
+        }
+    }
+
+    private func selectedURLs(on owner: AXUIElement) throws -> [URL] {
+        try AXClient.elements(kAXSelectedChildrenAttribute as CFString, of: owner).map { child in
+            let urls = Set(try ([child] + AXTree.paths(below: child).map(\.element)).compactMap { try AXClient.url(of: $0) })
+            guard urls.count == 1, let url = urls.first else {
+                throw AutomationFailure.invalidAccessibilityValue("Selected Finder item URL")
+            }
+            return url
         }
     }
 
@@ -1080,7 +1145,7 @@ final class FinderMenuSession {
             )
             guard try isDescendant(
                 hitElement,
-                of: resolved.firstItem.directChild
+                of: resolved.firstItem.itemScope
             ) else {
                 throw AutomationFailure.focusLost(
                     "The Finder item was obscured before opening its menu."
@@ -1119,12 +1184,26 @@ final class FinderMenuSession {
         return deltaX * deltaX + deltaY * deltaY
     }
 
-    private func waitForStableMenu(_ menu: AXUIElement) throws -> MenuSnapshot {
-        let deadline = Date().addingTimeInterval(AutomationTiming.stability)
+    private func waitForStableMenu(_ menu: AXUIElement, requiredTitles: Set<String> = []) throws -> MenuSnapshot {
+        let deadline = Date().addingTimeInterval(requiredTitles.isEmpty ? AutomationTiming.stability : AutomationTiming.target)
         var previous: MenuSnapshot?
         while Date() < deadline {
             switch try observeMenu(menu) {
             case let .ready(current):
+                let items = try AXClient.elements(kAXChildrenAttribute as CFString, of: menu)
+                let available = try requiredTitles.allSatisfy { title in
+                    let matches = try items.filter {
+                        try AXClient.string(kAXRoleAttribute as CFString, of: $0) == kAXMenuItemRole as String
+                            && AXClient.string(kAXTitleAttribute as CFString, of: $0) == title
+                            && AXClient.bool(kAXEnabledAttribute as CFString, of: $0) == true
+                    }
+                    return matches.count == 1
+                }
+                guard available else {
+                    previous = nil
+                    runLoopSlice(AutomationTiming.poll)
+                    continue
+                }
                 if current == previous { return current }
                 previous = current
             case .notReady:
@@ -1305,10 +1384,4 @@ final class FinderMenuSession {
 private func runningFinder() -> NSRunningApplication? {
     NSRunningApplication.runningApplications(withBundleIdentifier: "com.apple.finder")
         .first(where: { !$0.isTerminated })
-}
-
-private func sameElements(_ lhs: [AXUIElement], _ rhs: [AXUIElement]) -> Bool {
-    lhs.count == rhs.count && lhs.allSatisfy { element in
-        rhs.contains(where: { AXClient.same($0, element) })
-    }
 }

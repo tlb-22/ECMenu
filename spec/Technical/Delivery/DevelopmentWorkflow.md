@@ -31,34 +31,18 @@ flowchart TB
 
 ## 测试、预览与真实界面捕获
 
-```mermaid
-flowchart TB
-    definitions[Tests 中的可重复定义]
-    subgraph isolated[隔离验证与预览]
-        tests[test.sh<br/>脚本测试 / XCTest / Preview 注册 / 捕获工具静态检查]
-        preview[ECMenuPreviews<br/>内存数据 + 生产呈现]
-    end
-    subgraph system[系统集成与真实 UI]
-        integration[test-integration.sh<br/>签名 Sender → 主应用 IPC]
-        finder[FinderMenuAutomation<br/>真实菜单 / 选择 / 截图]
-    end
-    logs[(scratch tests / logs / previews)]
-    definitions --> tests --> logs
-    definitions --> preview -->|窗口截图| logs
-    definitions --> integration -->|读取文件 UF_HIDDEN 验证效果| logs
-    definitions --> finder --> logs
-```
+默认 `test.sh` 通过宿主调度一次性 macOS 虚拟机，源码同步、真实签名构建、桌面操作及外部结果核验均在 guest 执行。项目预热、临时签名、共用锁与清理协议由[虚拟机端到端测试](VirtualMachineTests.md)维护，用例入口见 [Tests](../../../Tests/Main.md)。
 
-| 职责模块 | 核心类型或脚本与源码入口 | 输入 | 外部 API / CLI | 输出 / 失败 |
-|---|---|---|---|---|
-| 测试编排 | [test.sh](../../../scripts/test.sh) | 测试定义、签名环境、GUI 会话 | `xcodebuild test`、`xcrun swiftc`、Python、`xcresulttool` | `.xcresult`、日志、各检查退出码；`test.sh` 不包含另一个集成脚本的执行 |
-| IPC 集成 | [test-integration.sh](../../../scripts/test-integration.sh) 编排签名宿主与结果验证，[ContextCommandSender.swift](../../../Tests/Integration/ContextCommandSender.swift) 发出请求 | 当前 Debug 产物、签名 Sender、仓库内普通文件 fixture | 当前 socket/Security API；Python `os.stat(..., follow_symlinks=False)` | 配置查询成功；单次隐藏命令后检查 `UF_HIDDEN`，超时失败；不驱动 Finder 菜单 |
-| Preview | [PreviewRuntime.swift](../../../Tests/ECMenuPreviews/PreviewRuntime.swift) 持有会话与窗口就绪协议，[capture-previews.sh](../../../scripts/capture-previews.sh) 编排双语截图；场景与启动入口见 [Preview 源码映射](../PreviewTarget.md#职责与源码映射) | 固定 Case、内存状态、语言参数 | 独立 SwiftUI/AppKit 宿主；`screencapture -l` 按窗口编号截图 | 可交互窗口或 PNG；复用产品视图，不写用户设置和业务输出 |
-| Finder 菜单捕获 | [capture-finder-menus.sh](../../../scripts/capture-finder-menus.sh) 编排批次，[FinderMenuAutomation.swift](../../../Tests/FinderMenuCapture/FinderMenuAutomation.swift) 驱动本次验收；场景和系统边界见 [Finder 菜单捕获](../FinderMenuCapture.md) | 场景/语言、fixture、真实 Finder | Accessibility `AXUIElementCopyAttributeValue/PerformAction`、`CGEvent` 输入、`SCShareableContent` / `SCScreenshotManager.captureScreenshot`、ImageIO PNG 编码；`defaults` 语言事务 | 真实菜单图像及期望校验；权限、菜单身份、语言或窗口条件不满足则失败 |
-| Finder 窗口保持 | [with-finder-windows-checked.sh](../../../scripts/lib/with-finder-windows-checked.sh) 包装测试，[FinderWindowCheck.swift](../../../Tests/FinderWindowPreservation/FinderWindowCheck.swift) 采样和核对；纯规则入口见[窗口保持](../FinderWindowPreservation.md#职责与源码映射) | 测试前后的 Finder 窗口集合 | CoreGraphics `CGWindowListCopyWindowInfo` | 前后窗口集合不同导致检查失败；不以自动关窗隐藏差异 |
-| 用户焦点恢复 | [with-user-focus-restored.sh](../../../scripts/lib/with-user-focus-restored.sh) 持有最外层会话，[UserFocusRestorer.swift](../../../Tests/UserFocusRestoration/Support/UserFocusRestorer.swift) 读取并激活应用；纯规则入口见[焦点恢复](../UserFocusRestoration.md#职责与源码映射) | 自动化前的应用身份与结束时的运行应用集合 | AppKit `NSRunningApplication` / `activate` | 尽量恢复同一应用焦点；原应用退出时跳过，恢复失败反馈给脚本 |
+| 职责模块 | 核心入口 | 输入与外部 API | 输出与成功边界 |
+|---|---|---|---|
+| 宿主调度 | [test-vm.py](../../../scripts/test-vm.py)、[test-vm-guest.py](../../../scripts/test-vm-guest.py) | 当前源码、封存环境；Tart、SSH、内核文件锁 | 构建/测试/导出/清理独立状态与可重复输入；必要自动阶段全部通过，人工检查项独立记录 |
+| 真实桌面 | [test-desktop-guest.sh](../../../scripts/test-desktop-guest.sh)、`Tests/FinderMenuCapture/Desktop/` | 实际设置控件、Finder 菜单；AX、CGEvent、SCK | 逐 case 步骤、断言、实际输出与失败截图 |
+| IPC 集成 | [test-integration.sh](../../../scripts/test-integration.sh)、[ContextCommandSender.swift](../../../Tests/Integration/ContextCommandSender.swift) | 独立进程、真实签名及生产 socket | 配置读取及文件 flags；进程身份失败与主应用继续服务边界 |
+| 单测例外与普通 CI | [test-checks.sh](../../../scripts/test-checks.sh) | 已确认的[故障模式](../../../Tests/UnitTestExceptions.md)、Xcode 构建与捕获定义 | 8 个竞态/系统故障例外、Preview 注册、静态定义；不代表真实用户流程 |
+| Preview | [PreviewRuntime.swift](../../../Tests/ECMenuPreviews/PreviewRuntime.swift)、[capture-previews.sh](../../../scripts/capture-previews.sh) | 固定内存 Case 与生产呈现；guest 窗口就绪、截图 | 双语视觉证据；不是产品状态或文件输出验收 |
+| Finder 菜单捕获 | [capture-finder-menus.sh](../../../scripts/capture-finder-menus.sh)、[FinderMenuAutomation.swift](../../../Tests/FinderMenuCapture/FinderMenuAutomation.swift) | 真实 Finder 上下文、语言和 fixture；AX、CGEvent、SCK | 标题检查与独立菜单 PNG，失败明确非零 |
 
-这里的系统 API 属于开发宿主，不进入产品权限或命令执行链。具体捕获/窗口读取方法与验证版本分别见 [Finder 菜单捕获](../FinderMenuCapture.md)、[窗口保持](../FinderWindowPreservation.md)、[焦点恢复](../UserFocusRestoration.md)；工具的输入模拟和截图权限不能转化为产品对这些权限的依赖。
+开发工具权限只授予 guest 测试驱动，不进入生产产品依赖。手动构建启动与环境切换保留[焦点恢复](../UserFocusRestoration.md)，默认自动流程没有宿主桌面焦点或 Finder 窗口保持职责。
 
 ## 图标、README 图像与正式发布
 

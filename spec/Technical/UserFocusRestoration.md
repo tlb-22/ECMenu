@@ -1,12 +1,12 @@
-# 自动化脚本的用户焦点恢复
+# 本机开发入口的用户焦点恢复
 
-自动化可以临时激活 ECMenu、Preview 或 Finder，但不应在结束后把用户留在这些窗口中。焦点恢复覆盖会驱动界面的非交互脚本；`preview-ui.sh` 的产物本身是一个供人操作的前台窗口，因此不在此范围内。
+本机手动开发和环境切换入口在结束时请求恢复启动前的应用焦点；`run-debug.sh` 与 `activate-environment.sh` 共用此边界。`preview-ui.sh` 用于留下可交互的前台窗口。默认验收在一次性虚拟机中运行，宿主只编排与收集产物，不需要通过焦点恢复保护开发桌面；流程见[测试定义](../../Tests/Main.md)。
 
 ## 稳定路径
 
 最外层脚本在等待共享操作锁之前，通过 `NSWorkspace.frontmostApplication` 记录前台应用的 PID、启动时间、bundle identifier 和可执行文件路径。它随后以会话标记重新执行原命令；同一调用链中的子脚本看到该标记后直接运行，不再捕获或恢复焦点。
 
-原命令退出时，先执行其自身的进程、窗口、语言和偏好恢复，再由最外层包装器请求原应用重新激活。包装器通过独立进程组运行完整子进程树；收到 HUP、INT 或 TERM 时把信号转发到该进程组，等待子脚本清理后才恢复焦点。恢复目标必须仍是同一 PID、非空且相同的启动时间及稳定身份，避免 PID 复用后激活无关进程。Finder 是唯一例外：截图和环境切换会按设计重启 Finder，原进程消失时可以选择 bundle identifier 与可执行路径唯一匹配的新 Finder 进程。
+原命令退出时，先执行其自身的进程、窗口、语言和偏好恢复，再由最外层包装器请求原应用重新激活。包装器通过独立进程组运行完整子进程树；收到 HUP、INT 或 TERM 时把信号转发到该进程组，等待子脚本清理后才恢复焦点。恢复目标必须仍是同一 PID、非空且相同的启动时间及稳定身份，避免 PID 复用后激活无关进程。Finder 是唯一例外：Extension 刷新和环境切换会按设计重启 Finder，原进程消失时可以选择 bundle identifier 与可执行路径唯一匹配的新 Finder 进程。
 
 普通应用已经退出时跳过恢复，不重新启动应用；没有前台应用的 CI 或无界面会话也正常执行原命令，只是不建立恢复目标。恢复失败会使原本成功的脚本失败；原命令已经失败时保留其退出状态，并在独立日志中报告恢复错误。
 
@@ -14,11 +14,11 @@
 
 | 职责模块 | 核心类型或脚本与源码入口 | 输入、输出与状态所有权 |
 |---|---|---|
-| 自动化恢复会话 | [user-focus.sh](../../scripts/lib/user-focus.sh) 接入，[with-user-focus-restored.sh](../../scripts/lib/with-user-focus-restored.sh) 执行包装 | 自动化命令 → 捕获原焦点、运行子进程组、等待清理后恢复；包装器持有本轮身份快照、子进程、会话标记和原退出码，通过 `trap` / `kill` / `wait` 转发信号并等待退出 |
+| 手动开发恢复会话 | [user-focus.sh](../../scripts/lib/user-focus.sh) 接入，[with-user-focus-restored.sh](../../scripts/lib/with-user-focus-restored.sh) 执行包装 | 手动开发命令 → 捕获原焦点、运行子进程组、等待清理后恢复；包装器持有本轮身份快照、子进程、会话标记和原退出码，通过 `trap` / `kill` / `wait` 转发信号并等待退出 |
 | 运行进程与系统激活 | `UserFocusRestorer` · [UserFocusRestorer.swift](../../Tests/UserFocusRestoration/Support/UserFocusRestorer.swift) | `capture` / `restore` / `launch` 参数 → 编码身份、恢复状态或新命令进程；`NSWorkspace` 读取运行事实，`NSRunningApplication.activate` 请求激活并在主 RunLoop 核实结果，`setsid` / `execvp` 建立子命令会话 |
 | 恢复目标规则 | `UserFocusApplicationIdentity` / `UserFocusRestorationResolver` · [UserFocusRestorationModel.swift](../../Tests/UserFocusRestoration/Support/UserFocusRestorationModel.swift) | 原身份与当前候选身份 → 可恢复目标或不可用；纯值计算，无外部 I/O，由系统边界读取事实后调用 |
 
-身份匹配、PID 复用与 Finder 替换规则由 [UserFocusRestorationTests.swift](../../Tests/UserFocusRestoration/Tests/UserFocusRestorationTests.swift) 验证，并纳入 [test.sh](../../scripts/test.sh)。测试期间与窗口检查的外层关系见 [Finder 窗口保持](FinderWindowPreservation.md)。
+这些支持文件属于本机手动开发入口。目标身份、退出状态与恢复结果记录在本次日志中；虚拟机验收不把恢复宿主焦点或保持宿主 Finder 窗口集合作为产品通过条件。
 
 ## 平台契约与证据边界
 

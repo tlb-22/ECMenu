@@ -27,6 +27,6 @@
 
 ## 使用与维护
 
-使用 `./scripts/preview-ui.sh <预览 ID>` 打开独立预览，语言和批量截图参数见[界面预览脚本](../../scripts/Main.md#界面预览)。预览复用生产呈现，异步交互测试与真实系统验收的区别见[Preview 技术边界](PreviewTarget.md)。
+使用 `./scripts/preview-ui.sh <预览 ID>` 打开独立预览，语言和批量截图参数见[界面预览脚本](../../scripts/Main.md#视觉证据与交付)。预览复用生产呈现，异步交互测试与真实系统验收的区别见[Preview 技术边界](PreviewTarget.md)。
 
 新增、移动或删除独立页面、窗口和弹窗时，同步本页入口及相关能力 spec。局部组件继续在所属能力内组织，目录归属见[目录规则](Architecture/DirectoryRules.md)。

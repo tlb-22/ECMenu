@@ -81,12 +81,6 @@ final class CommandMenuSettingsReplica: NSObject {
     /// 本次菜单使用的开关与命令顺序；副本只提供不可变值。
     var menuSettings: CommandMenuSettings { configuration.configuration }
 
-    /// 从单飞状态推导是否仍在等待响应，供边界验证读取。
-    var isRefreshing: Bool {
-        if case .fetching = refreshState { return true }
-        return false
-    }
-
     /// 查询功能自身的显示配置，不合并产品总开关。
     /// - Parameter feature: 固定右键功能标识。
     /// - Returns: 功能未被独立隐藏时为 `true`。

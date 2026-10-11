@@ -62,27 +62,6 @@ final class FinderContextMenuController {
         self.isApplicationAvailable = isApplicationAvailable
     }
 
-    /// 为固定声明树提供不依赖动态配置的构建入口。
-    convenience init(
-        menu: FinderContextMenuDefinition,
-        isFeatureVisible: @escaping (ContextCommandFeatureID) -> Bool,
-        isMenuEnabled: @escaping () -> Bool = { true },
-        isApplicationAvailable: @escaping (
-            ContextCommandApplicationRequirement
-        ) -> Bool = { requirement in
-            NSWorkspace.shared.urlForApplication(
-                withBundleIdentifier: requirement.bundleIdentifier
-            ) != nil
-        }
-    ) {
-        self.init(
-            makeMenu: { menu },
-            isFeatureVisible: isFeatureVisible,
-            isMenuEnabled: isMenuEnabled,
-            isApplicationAvailable: isApplicationAvailable
-        )
-    }
-
     /// 把 Extension 配置副本适配为 Controller 使用的纯查询边界。
     /// - Parameters:
     ///   - makeMenu: 按本次配置构造菜单项、顺序、分组和层级。
@@ -273,14 +252,5 @@ final class FinderContextMenuController {
         }
         retainedActionTags.removeAll { $0 == tag }
         return action
-    }
-
-    /// 从 Finder 原样回传的唯一菜单项 tag 查询已准备调用。
-    /// - Parameter menuItem: Finder 回传的菜单项。
-    /// - Returns: 当前菜单构建时注册的 Action；tag 无效时为 `nil`。
-    func preparedAction(
-        for menuItem: NSMenuItem
-    ) -> PreparedContextMenuAction? {
-        preparedActionsByTag[menuItem.tag]
     }
 }

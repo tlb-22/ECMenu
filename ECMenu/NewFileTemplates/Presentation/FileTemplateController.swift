@@ -46,10 +46,6 @@ final class FileTemplateController: ObservableObject {
         _ = try await perform { try await self.operations.importFile(at: url) }
     }
 
-    func updateTemplate(_ template: FileTemplate) async throws {
-        _ = try await perform { try await self.operations.updateTemplate(template) }
-    }
-
     func updateName(for id: FileTemplateID, field: FileTemplateNameField, value: String) async throws {
         _ = try await perform {
             try await self.operations.updateName(for: id, field: field, value: value)

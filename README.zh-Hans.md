@@ -67,10 +67,12 @@ ECMenu 以英文为源语言，并提供简体中文翻译。应用界面与 Fin
 
 ```bash
 ./scripts/run-debug.sh
+./scripts/prepare-test-vm.sh
 ./scripts/test.sh
-./scripts/test-integration.sh
 ./scripts/build-release.sh
 ```
+
+桌面测试在一次性 macOS 虚拟机内执行，首次运行前需要准备项目模板。环境要求与验收证据见[测试覆盖](Tests/Main.md)。
 
 开发脚本的产物位置与完整说明见[开发脚本](scripts/Main.md)，产品行为与技术边界见[项目规格](spec/Main.md)。
 

@@ -80,11 +80,11 @@ Xcode 26.6（17F113）附带的 macOS 26.5 SDK 将 `NSDataWritingWithoutOverwrit
 
 创建流程从所选模板取得完整内容快照，按需求定义的顺序产生名称候选，每个候选直接交给 `Data.write(to:options: .withoutOverwriting)`，不先读取“可用文件名”再执行普通覆盖写入。系统报告目标已存在时继续下一个候选，其他错误立即结束。
 
-[NewFileTests](../../../Tests/ECMenuTests/Commands/NewFile/NewFileTests.swift) 定义空模板、二进制内容、同名模板身份、候选命名、模板失效与同进程并发创建的验证。并发用例要求预先存在的文件内容不变、各次创建结果互不重名且内容完整；它只覆盖同一进程中的并发任务，不提供跨进程压力结果或 Foundation 内部原子实现的证据。产品依赖 SDK 规定的“不覆盖既有目标”结果，而不是未公开的具体实现方式。
+[虚拟机日常验收](../../../Tests/Main.md)从真实模板子菜单创建文件，检查模板字节、候选命名、既有内容不变与 Finder 结果选择。运行报告按实际 fixture 说明同名模板、源变化和失败场景的覆盖。产品依赖 SDK 规定的“不覆盖既有目标”结果；菜单验收不提供 Foundation 内部原子实现或任意跨进程压力的证据。
 
-模板导入、持久化恢复与错误状态的验证见[模板存储证据](NewFileTemplates/Persistence.md#验证与实机证据)和[应用操作证据](NewFileTemplates/Flows.md#验证证据与限制)。这些隔离测试不驱动真实 Finder，也不替代菜单加载、点击与创建后选择的运行验收。
+模板导入、持久化恢复与错误状态的验证见[模板存储证据](NewFileTemplates/Persistence.md#验证与实机证据)和[应用操作证据](NewFileTemplates/Flows.md#验证证据与限制)。管理页、真实 Finder 点击和最终文件内容共同形成流程证据，截图只证明捕获时刻的可见界面。
 
-2026-09-08 在 macOS 26.6.2（25G83）上，上述测试覆盖的二进制内容、同名模板身份、持久化失败及并发不覆盖检查通过。真实 Finder 验收确认 TXT 子菜单可创建零字节的 `untitled.txt` 和冲突后的 `untitled_copy.txt`，并在默认文件创建中确认了自动选中。菜单截图和窗口归属的证据边界见 [Finder 菜单自动截图](../FinderMenuCapture.md#模板子菜单)。
+2026-09-08 在 macOS 26.6.2（25G83）上，当时的隔离文件检查通过二进制内容、同名模板身份、持久化失败及同进程并发不覆盖场景；此结果限定于当次代码和环境。真实 Finder 验收确认 TXT 子菜单可创建零字节的 `untitled.txt` 和冲突后的 `untitled_copy.txt`，并在默认文件创建中确认了自动选中。菜单截图和窗口归属的证据边界见 [Finder 菜单自动截图](../FinderMenuCapture.md#模板子菜单)。
 
 ## Finder 自动选择
 

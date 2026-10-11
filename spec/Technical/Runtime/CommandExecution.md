@@ -91,6 +91,6 @@ Router 释放请求取消尚未完成的任务，进程终止不承诺取消清�
 
 ## 验证入口
 
-`./scripts/test.sh` 是完整测试入口，实际运行记录统一保存在仓库内产物目录。测试定义包括 [ContextCommandExecutionTests](../../../Tests/ECMenuTests/CommandRuntime/ContextCommandExecutionTests.swift) 的 prepare/run、无效负载、原任务取消传播和 Router 生命周期；[ContextCommandCompositionTests](../../../Tests/ECMenuTests/App/ContextCommandCompositionTests.swift) 固化产品注册；[CommandAlertContentTests](../../../Tests/ECMenuTests/Feedback/CommandAlertContentTests.swift) 固化纯反馈语义。各能力 spec 链接自身系统边界和交互测试。
+`./scripts/test.sh` 在一次性虚拟机中执行真实用户流程并保存报告、截图、日志与最终副作用证据；完整入口与导航见[测试定义](../../../Tests/Main.md)。各能力以 Finder 菜单、实际窗口和文件或系统状态构成验收链，测试通过范围以本轮报告为准。
 
-2026-09-08 当前结构通过完整 231 项测试、Preview 与工具检查，并通过签名 IPC 集成；环境、覆盖与实机范围见[验证记录](../Architecture/Verification.md)。测试定义和注入反馈不能证明 Finder 选择或外部应用加载已在实机成功。
+[ContextCommandExecutionTests](../../../Tests/ECMenuTests/CommandRuntime/ContextCommandExecutionTests.swift)只保留快速完成先于延迟显示，以及 Router 释放时取消同一个任务并阻止迟到结果两个精确交错。所有单测保留理由见[单元测试例外](../../../Tests/UnitTestExceptions.md)。历史系统观察与运行标识保存在[验证记录](../Architecture/Verification.md)，不作为当前源码已验收的替代证据。

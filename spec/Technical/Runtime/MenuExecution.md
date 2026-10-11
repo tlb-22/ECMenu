@@ -221,17 +221,13 @@ sequenceDiagram
 
 ## 设计依据与验证
 
-三个可变生命周期分别拥有状态：Controller 持有菜单动作与 tag，Replica 持有已应用快照及单飞状态，主应用 Router 持有业务任务。它们通过不可变命令和快照交互；菜单失效、连接关闭和业务完成互不等同。系统事实读取从纯菜单规则分开，让测试可以固定文件事实，同时保留真实 API 失败路径。
+三个可变生命周期分别拥有状态：Controller 持有菜单动作与 tag，Replica 持有已应用快照及单飞状态，主应用 Router 持有业务任务。它们通过不可变命令和快照交互；菜单失效、连接关闭和业务完成互不等同。系统事实读取在明确平台边界完成，菜单规则消费本次不可变观察，执行端处理之后发生的目标变化。
 
 ### 自动化验证入口
 
-- [范围登记测试](../../../Tests/ECMenuFinderExtensionTests/App/FinderDirectoryRegistrationTests.swift)：根目录回退、标准化和去重。
-- [菜单组合](../../../Tests/ECMenuFinderExtensionTests/Menu/ContextMenuCompositionTests.swift)、[功能条件](../../../Tests/ECMenuFinderExtensionTests/Menu/ContextCommandFeatureTests.swift)、[布局](../../../Tests/ECMenuFinderExtensionTests/Menu/ContextMenuLayoutTests.swift)：字段映射、开关/依赖过滤、共享事实、旧 action 保留路径、模板更新只影响下一次构建、大模板菜单保留所有当前叶子及树规范化。
-- [发送客户端](../../../Tests/ECMenuFinderExtensionTests/IPC/ContextCommandClientTests.swift)：单次发送、失败提示一次且不重试。
-- [配置副本](../../../Tests/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)：缓存恢复、失败保留、后续刷新、并发提示合并及过时结果淘汰。
-- [IPC 测试](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift)：wire 验证、对称认证、单向/并发投递、错误 ACK、截断 frame、静默对端期限、提供者期限及监听失败清理。
+[虚拟机日常验收](../../../Tests/Main.md)使用当前成对签名产物，从真实 Finder 上下文读取菜单、点击命令并核对最终副作用；模板子菜单和一级入口顺序通过真实管理页修改及重开菜单确认。菜单截图和 AX 结构保留可检查的界面证据，运行报告记录实际执行的上下文与语言。
 
-这些链接是验证定义，不代表任意源码版本均已执行通过。完整自动化入口为 [test.sh](../../../scripts/test.sh)；真实菜单驱动入口与限制见[菜单自动截图](../FinderMenuCapture.md)。
+[配置副本测试](../../../Tests/ECMenuFinderExtensionTests/CommandMenuSettings/CommandMenuSettingsReplicaTests.swift)只验证刷新信号与旧响应的精确交错；[IPC 例外](../../../Tests/ECMenuTests/IPC/ContextCommandTransportTests.swift)只验证 accept 资源故障和清理顺序。保留理由见[单元测试例外](../../../Tests/UnitTestExceptions.md)，它们不替代真实菜单、认证和文件操作验收。
 
 ### 实机证据与适用范围
 

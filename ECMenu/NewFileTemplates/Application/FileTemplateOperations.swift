@@ -61,10 +61,6 @@ final class FileTemplateOperations {
         try await perform { try await self.library.importFile(at: url) }
     }
 
-    func updateTemplate(_ template: FileTemplate) async throws -> FileTemplateCommit {
-        try await perform { try await self.library.update(template) }
-    }
-
     func updateName(
         for id: FileTemplateID,
         field: FileTemplateNameField,
