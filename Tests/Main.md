@@ -11,7 +11,7 @@
 | 模板管理 | 文件选择导入、名称提交、鼠标释放后的排序、替换及删除；重启后恢复已提交内容 | `EndToEnd/Desktop/Acceptance/` |
 | 新建文件 | 真实 Finder 子菜单点击，生成内容与导入来源字节一致，冲突不覆盖，选择指向新文件 | `EndToEnd/Desktop/Acceptance/`、`EndToEnd/Desktop/Features/NewFile/` |
 | 复制路径、隐藏与显示 | 剪贴板匹配 Finder 实际选择；文件 flags 与上下文菜单随操作变化 | `EndToEnd/Desktop/Acceptance/` |
-| 图片压缩 | 参数窗取消不写出；确认后实际 JPEG 尺寸、格式与冲突名称正确，来源不变 | `EndToEnd/Desktop/Acceptance/` |
+| 图片压缩 | 参数窗取消不创建目录；每次命令新建结果目录，实际 JPEG 尺寸、格式与目录/文件冲突名称正确，来源不变 | `EndToEnd/Desktop/Acceptance/` |
 | 菜单配置与会话 | 开关和排序改变真实 Finder 菜单；关闭配置窗口后命令仍可执行，重开恢复配置 | `EndToEnd/Desktop/Acceptance/` |
 | 外部应用 | 真实 Finder 菜单触发 VS Code 与 iTerm2，记录窗口截图；目标加载与终端工作目录由人工检查 | `EndToEnd/Desktop/Acceptance/` |
 | 存储失败 | 不可写目标显示错误，坏索引显示可恢复失败，其他命令仍可执行 | `EndToEnd/Desktop/Acceptance/` |
@@ -31,5 +31,7 @@
 - [独立预览](../spec/Technical/PreviewTarget.md)：固定视觉场景与生产呈现边界。
 
 `./scripts/test-checks.sh` 执行构建、捕获定义检查和少量故障注入例外。开发机调用时默认进入虚拟机，应用承载的 XCTest 窗口留在来宾；普通 CI 在自己的 runner 中执行。Preview 注册表列举不创建应用窗口。它的通过仅表达这些检查，不表达真实桌面验收通过。
+
+图片压缩的小改动可用 `python3 scripts/test-vm.py desktop --case image-compression` 执行对应真实用户流程。省略 `--case` 时执行全部桌面 case；指定流程仍构建当前源码并导出报告、截图和实际文件，宿主及 guest 报告记录本轮筛选范围。
 
 本阶段验收使用已准备权限的开发环境。干净安装、产品首次权限、真实注销登录、最低支持系统和 Release 交付物的完整验收尚未纳入默认流程。

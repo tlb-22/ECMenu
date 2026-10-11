@@ -62,7 +62,7 @@ def main():
     (EXCHANGE / "guest-process.json").write_text(json.dumps({"pid": os.getpid(), "name": payload["name"]}) + "\n")
     run.mkdir(parents=True, exist_ok=True)
     stage.mkdir(parents=True)
-    report = {"version": 1, "action": payload["action"], "status": "running", "phases": {}}
+    report = {"version": 1, "action": payload["action"], "case": payload["case"], "status": "running", "phases": {}}
     keychain = run / "signing.keychain-db"
     helper = run / "SigningIdentity"
     active = None
@@ -293,6 +293,8 @@ def main():
                 scripts = {"integration": "test-integration.sh", "finder": "capture-finder-menus.sh", "previews": "capture-previews.sh", "readme": "capture-readme-images.sh"}
                 if action == "desktop":
                     arguments = ["/bin/zsh", "scripts/test-desktop-guest.sh", str(run / "desktop")]
+                    if payload["case"] is not None:
+                        arguments.extend(["--case", payload["case"]])
                 else:
                     arguments = ["/bin/zsh", "scripts/" + scripts[action], *payload["arguments"]]
                 command(arguments, "test")

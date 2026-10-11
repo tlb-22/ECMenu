@@ -224,18 +224,29 @@ def signing(run, configuration, initialize=False):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="在一次性 macOS 虚拟机内执行 ECMenu 验收")
+    parser = argparse.ArgumentParser(description="在一次性 macOS 虚拟机内执行 ECMenu 验收",
+                                     epilog="图片压缩专项：desktop --case image-compression")
     parser.add_argument("action", choices=ACTIONS)
     parser.add_argument("arguments", nargs=argparse.REMAINDER)
     args = parser.parse_args()
     if args.arguments[:1] == ["--"]:
         args.arguments = args.arguments[1:]
-    if args.action in ("prepare", "run", "desktop", "checks"):
+    case = None
+    if args.action == "desktop":
+        desktop_parser = argparse.ArgumentParser(prog=f"{parser.prog} desktop",
+                                                 description="在虚拟机内执行桌面产品验收")
+        desktop_parser.add_argument("--case", choices=("image-compression",),
+                                    help="只执行指定用户流程；省略时执行完整桌面验收")
+        case = desktop_parser.parse_args(args.arguments).case
+        args.arguments = []
+    elif args.action in ("prepare", "run", "checks"):
         if args.arguments in (["--help"], ["-h"]):
             parser.print_help()
             return 0
         if args.arguments:
             parser.error(f"{args.action} 不接受额外参数")
+    elif any(argument == "--case" or argument.startswith("--case=") for argument in args.arguments):
+        parser.error("--case 仅供 desktop 使用")
     if platform.system() != "Darwin" or platform.machine() != "arm64":
         parser.error("需要 Apple Silicon macOS 宿主")
     try:
@@ -246,7 +257,7 @@ def main():
     run = ROOT / ".artifacts/scratch/tests" / name
     run.mkdir(parents=True)
     print(f"虚拟机结果目录：{run}", flush=True)
-    report = {"version": 1, "action": args.action, "status": "running", "startedAt": utc(), "phases": {}}
+    report = {"version": 1, "action": args.action, "case": case, "status": "running", "startedAt": utc(), "phases": {}}
     report_path = run / "vm-report.json"
     write_json(report_path, report)
     vm_process = active = environment = lock = ip = None
@@ -379,7 +390,7 @@ def main():
             guest_scratch = '"$HOME"/' + shlex.quote(configuration.directory + "/.artifacts/scratch")
             phase("template-clean", lambda: checked(
                 ssh(ip, "/bin/test ! -e " + guest_scratch), timeout=10))
-        payload = {"action": args.action, "arguments": args.arguments, "name": name, "user": environment["user"], "project": configuration.guest_project(), "sourceSha256": report["sourceSha256"],
+        payload = {"action": args.action, "case": case, "arguments": args.arguments, "name": name, "user": environment["user"], "project": configuration.guest_project(), "sourceSha256": report["sourceSha256"],
                    "xcode": environment["versions"]["xcode"], "signing": credentials}
         write_json(run / "guest-input.json", {key: value for key, value in payload.items() if key != "signing"})
 

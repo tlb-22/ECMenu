@@ -1,6 +1,6 @@
 # 压缩图片
 
-能力范围是从 Finder 的非空图片选择收集本批参数，按顺序转换成独立 JPG，保留逐项失败和取消前已完成的输出。产品行为见[需求](../../Requirements/Features/ImageCompression.md)；Finder 场景和最终选择分别见[菜单语义](../Platform/Finder/ContextMenus.md)与[结果选择](../Platform/Finder/ResultSelection.md)。
+能力范围是从 Finder 的非空图片选择收集本批参数，按顺序转换成独立 JPG，在每个源目录下创建本批专用输出文件夹，并保留逐项失败和取消前已完成的输出。产品行为见[需求](../../Requirements/Features/ImageCompression.md)；Finder 场景和最终选择分别见[菜单语义](../Platform/Finder/ContextMenus.md)与[结果选择](../Platform/Finder/ResultSelection.md)。
 
 ## 执行流
 
@@ -36,11 +36,18 @@ sequenceDiagram
             X->>S: ImageIO 读取 / 变换 / 编码
             S-->>X: JPEG Data 或源处理失败
             opt 编码成功
-                X->>S: 排他写入候选 URL
-                S-->>X: outputURL 或目标失败
-                opt JPG 已生成
-                    X->>S: 设置创建与修改时间
-                    S-->>X: 完成或日期问题
+                opt 本批尚未保存该源目录的创建结果
+                    X->>S: 排他创建 compressed 候选文件夹
+                    S-->>X: 输出目录 URL 或创建失败
+                    X->>X: 保存源父目录对应的目录或创建失败
+                end
+                opt 输出目录可用
+                    X->>S: 在本批输出目录排他写入候选 URL
+                    S-->>X: outputURL 或目标失败
+                    opt JPG 已生成
+                        X->>S: 设置创建与修改时间
+                        S-->>X: 完成或日期问题
+                    end
                 end
             end
             X-->>H: 单项结果；已有输出保留
@@ -62,10 +69,10 @@ ImageIO、CoreGraphics、AppKit 控件和存储适配均在主应用进程内调
 | 参数协调与偏好 | `ImageCompressionSettingsCoordinator`、`ImageCompressionSettingsStore` | [请求协调](../../../ECMenu/Commands/ImageCompression/Application/ImageCompressionSettingsCoordinator.swift)、[偏好存储](../../../ECMenu/Commands/ImageCompression/Persistence/ImageCompressionSettingsStore.swift) | 参数请求 / 确认值 → 初始设置 / 偏好更新 | Coordinator 协调确认时保存；Store 是注入的 UserDefaults 边界，见 IC02 |
 | 参数交互 | `ImageCompressionSettingsPrompt`、`ImageCompressionSettingsWindowController` | [会话](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionSettingsPrompt.swift)、[窗口](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionSettingsWindow.swift)、[表单](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionSettingsFormView.swift)、[整数输入 Formatter](../../../ECMenu/Commands/ImageCompression/Presentation/PositiveIntegerFormatter.swift) | 初始值 + 用户交互 → Settings? | Prompt 实例保活每个活动窗口；窗口拥有草稿和一次性 completion，结束即释放。原生表单见 IC03 |
 | 参数与计划规则 | `ImageCompressionSettings`、`ImageCompressionPlan`、`ImageCompressionDimensions` | [ImageCompressionSettings.swift](../../../ECMenu/Commands/ImageCompression/Domain/ImageCompressionSettings.swift)、[ImageCompressionPlan.swift](../../../ECMenu/Commands/ImageCompression/Domain/ImageCompressionPlan.swift)、[ImageCompressionDimensions.swift](../../../ECMenu/Commands/ImageCompression/Domain/ImageCompressionDimensions.swift) | 有效参数、URLs、基准日期、尺寸方向 → 计划与尺寸 | 纯规则，无外部 I/O；排序与尺寸不依赖窗口或 ImageIO 对象 |
-| 批次执行与系统适配：执行 | `ImageCompressionExecution`、`ImageCompressionPlatform` | [执行器与平台接口声明](../../../ECMenu/Commands/ImageCompression/Application/ImageCompressionExecution.swift) | Plan、注入平台、可选 Reporter → Report | 顺序处理并拥有逐项结果；Task/协作取消、autoreleasepool |
+| 批次执行与系统适配：执行 | `ImageCompressionExecution`、`ImageCompressionPlatform` | [执行器与平台接口声明](../../../ECMenu/Commands/ImageCompression/Application/ImageCompressionExecution.swift) | Plan、注入平台、可选 Reporter → Report | 单次执行唯一拥有各源父目录的创建结果及逐项结果；目录状态为已创建 URL 或冻结的创建失败，Task/协作取消、autoreleasepool |
 | 批次执行与系统适配：图像转换 | `ImageCompressionTranscoder`、`ImageCompressionProcessingError` | [ImageIO 实现](../../../ECMenu/Commands/ImageCompression/Platform/ImageCompressionTranscoder.swift)、[处理阶段错误](../../../ECMenu/Commands/ImageCompression/Domain/ImageCompressionProcessingError.swift) | URL + 设置 → JPEG Data / throws | IC04–IC06；单项图像对象生命周期止于 autoreleasepool |
-| 批次执行与系统适配：文件输出 | `ImageCompressionPlatform` 的系统扩展 | [系统装配、写入与日期设置](../../../ECMenu/Commands/ImageCompression/Platform/ImageCompressionFileOutput.swift) | 编码 Data、来源 URL、计划日期 → 输出 / 失败 | IC07–IC08；平台三个闭包可独立注入 |
-| 进度与反馈：结果呈现 | `ImageCompressionReport`、`ImageCompressionAlertContent`、`ImageCompressionFeedback` | [结果模型](../../../ECMenu/Commands/ImageCompression/Domain/ImageCompressionResults.swift)、[告警文案](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionAlertContent.swift)、[反馈](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionFeedback.swift) | 单项事实 → 派生集合、问题文案、最终反馈 | 结果只保存输入终态，成功 URL 和失败分组按需派生；IC09 |
+| 批次执行与系统适配：文件输出 | `ImageCompressionPlatform` 的系统扩展 | [系统装配、目录创建、写入与日期设置](../../../ECMenu/Commands/ImageCompression/Platform/ImageCompressionFileOutput.swift) | 源父目录 → 新输出目录；编码 Data、来源 URL、输出目录 → 文件；文件 URL、计划日期 → 时间设置结果 | IC07–IC09；目录创建、文件写入和属性设置各自为副作用边界 |
+| 进度与反馈：结果呈现 | `ImageCompressionReport`、`ImageCompressionAlertContent`、`ImageCompressionFeedback` | [结果模型](../../../ECMenu/Commands/ImageCompression/Domain/ImageCompressionResults.swift)、[告警文案](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionAlertContent.swift)、[反馈](../../../ECMenu/Commands/ImageCompression/Presentation/ImageCompressionFeedback.swift) | 单项事实 → 派生集合、问题文案、最终反馈 | 结果只保存输入终态，成功 URL 和失败分组按需派生；IC10 |
 | 进度与反馈：进度 | `ContextCommandProgressCenter`、`ContextCommandProgressPresenter` | [进度模块与源码入口](../Runtime/CommandProgress.md) | begin / advance / finish / 用户意图 → 可见快照 | Center 唯一拥有计数与取消状态；Presenter / Window 拥有 AppKit 资源 |
 
 压缩设置两个稳定键分别是 `image-compression.maximum-width`、`image-compression.quality`。窗口不读写 UserDefaults，确认出口在恢复等待前同步保存，多个窗口以实际确认顺序更新偏好。每个批次使用自己的确认快照，不随后追踪偏好变化。
@@ -80,9 +87,10 @@ ImageIO、CoreGraphics、AppKit 控件和存储适配均在主应用进程内调
 | IC04 / 源访问 | `FileHandle(forReadingFrom: URL)`、`close()` → 完成 / throws | 读取与关闭失败属于 source/decode；随后才尝试 ImageIO 容器，保留实际访问错误 |
 | IC05 / 图像读取 | `CGImageSourceCreateWithURL`、GetCount、GetPrimaryImageIndex、CopyPropertiesAtIndex；CreateThumbnailAtIndex 输入主图索引、transform=true、目标最大边 → CGImage? | 无容器、无图、无有效尺寸或 nil 缩略图 → decode 失败；方向与尺寸值交给纯规则 |
 | IC06 / 图像编码 | `CGColorSpace`、`CGContext`、fill/draw/makeImage；`CGImageDestinationCreateWithData`、AddImage、Finalize 输入新位图与 JPEG 质量 → Data | nil 位图/编码器或 finalize=false → encode 失败；先得到完整内存编码结果 |
-| IC07 / 输出写入 | `Data.write(to:,options:.withoutOverwriting)` 输入已编码 Data 与候选 URL → Void / throws | 只对 fileWriteFileExists 尝试下个候选；其他失败是 destination，保留源与目标目录身份 |
-| IC08 / 时间属性 | `FileManager.setAttributes` 输入创建/修改时间和已创建路径 → Void / throws | JPG 已生成是独立完成点；日期失败保留输出并附带 fileDateError |
-| IC09 / 最终反馈 | `NSWorkspace.activateFileViewerSelecting([URL])`、`Logger`、`NSAlert`、`NSSound` | 非空输出一次性交给 Finder，无选择完成回执；权限与日期问题汇总一次警告，其他问题日志和提示音 |
+| IC07 / 输出目录 | `prepareOutputDirectory(源父目录 URL)`；`Darwin.mkdir(path, 0o777)` 输入 `compressed` 候选路径 → 新目录 URL / throws | 当前进程 umask 收紧创建权限；仅 `EEXIST` 继续 `_copy` 候选，同名文件与目录都属于冲突；其他 errno 立即冻结为 `NSPOSIXErrorDomain` 失败，记录源父目录作为实际失败位置 |
+| IC08 / 输出写入 | `writeJPEG(Data, sourceURL, directoryURL)`；`Data.write(to:,options:.withoutOverwriting)` 输入已编码 Data 与输出目录内的候选 URL → 输出 URL / throws | 只对 fileWriteFileExists 尝试下个候选；其他失败是 destination，保留源图片与实际输出目录身份 |
+| IC09 / 时间属性 | `FileManager.setAttributes` 输入创建/修改时间和已创建路径 → Void / throws | JPG 已生成是独立完成点；日期失败保留输出并附带 fileDateError |
+| IC10 / 最终反馈 | `NSWorkspace.activateFileViewerSelecting([URL])`、`Logger`、`NSAlert`、`NSSound` | 非空输出一次性交给 Finder，无选择完成回执；权限与日期问题汇总一次警告，其他问题日志和提示音 |
 
 ## 类型能力与实际解码
 
@@ -114,14 +122,20 @@ ImageIO 可以为新图像生成描述属性。macOS 26.6.2 来宾的实际 JPEG
 
 ## 输出落盘与文件时间
 
-每项先在内存中完成 JPEG 编码，再用 `.withoutOverwriting` 写入最终候选路径。编码失败不会创建目标，已有文件不会被替换。
+每项先在内存中完成 JPEG 编码。`ImageCompressionExecution` 在单次运行内保存各源父目录的目录创建结果；首次取得 JPEG Data 后调用 `prepareOutputDirectory` 排他创建新的 `compressed` 候选目录，再在其中用 `.withoutOverwriting` 写入 JPG。结果是已创建目录 URL 或冻结的创建失败，同一源父目录只尝试创建一次；后续已编码图片共享目录，或分别记录同一创建失败。不同批次和不同源父目录分别创建目录，状态只存在于本次执行。
 
-目标目录写入失败时，受影响图片与失败目录是两个不同的事实：用户反馈以图片名称或数量说明其所在文件夹不可写，诊断同时保留源路径和目标目录。
+目录与文件候选都使用统一的 `FileCollisionNaming` 序列。目录冲突包含已有文件、文件夹及并发批次刚创建的目录，不能通过先检查存在性再复用目录处理；每次命令必须拥有独立目录。JPG 首选名称由源文件基础名与 `.jpg` 组成，同基础名输入在本批目录中通过 `_copy` 序列区分。
+
+设置取消与源处理失败不会创建输出目录。目录创建后发生写入失败时保留该目录，避免清理与其他文件系统操作形成删除竞态；部分成功或取消也保留已经生成的文件。选择已生成图片再次压缩时，直接以其当前父目录作为新的源父目录，不对文件夹名称赋予额外身份。
+
+目录创建与文件写入失败时，受影响图片与失败位置是两个不同的事实：创建失败记录源父目录，写入失败记录本批实际输出目录。用户反馈以图片名称或数量说明输出文件夹不可写，诊断同时保留源路径和实际失败位置。
 
 创建时间和修改时间在 JPEG 成功落盘后设置。时间属性失败时保留已经生成的 JPG，并把该项作为问题反馈，不回滚文件。批量成功 URL 最终一次性交给 Finder 的批量选择 API。
 
 ## 验证入口与证据范围
 
-[虚拟机日常验收](../../../Tests/Main.md)从真实 Finder 图片选择进入参数窗口，分别取消和确认处理，检查 JPEG 尺寸、输出命名与元数据、既有目标内容以及源文件不变。真实权限失败和批量部分成功须以构造的来宾 fixture、最终输出和警告证据确认。
+[虚拟机日常验收](../../../Tests/Main.md)从真实 Finder 图片选择进入参数窗口，分别取消和确认处理，检查每次命令独立的输出目录、同批目录共享、目录与文件冲突命名、JPEG 尺寸和元数据以及源文件不变。检查以实际生成的目录、文件、Finder 选择与截图为证据。跨源目录、目录创建失败和批量部分成功须以对应来宾 fixture、最终输出和警告证据确认；验收定义不代表该场景已执行通过。
+
+macOS 26.6.2（25G83）的图片压缩专项验证了取消不创建目录、已有文件与目录占用名称时创建 `compressed_copy2`、同批同基础名图片按 `_copy` 命名，以及连续命令分别创建 `compressed` 和 `compressed_copy`。源文件与既有内容的字节保持一致，Finder 选中实际输出。证据编号为 `20261011-082525-vm-desktop-11008`，该轮仅执行图片压缩用例，验收、证据导出和临时克隆清理均通过。
 
 方向、容器主图和元数据剥离的既有样本环境为 macOS 26.6.1（25G76），来源与范围见“主图像、方向与像素”。当前流程报告只对实际执行的图像样本和窗口交互作出结论；没有相应样本结果时不将这些平台观察算作当前验收通过。

@@ -11,8 +11,8 @@ readonly destination="${XCODE_DESTINATION:-platform=macOS,arch=arm64}"
 readonly helper_identifier="com.axiomace.ecmenu.test.findermenuautomation"
 readonly desktop_job_runner="$project_root/Tests/Infrastructure/VirtualMachine/run-desktop-job.py"
 
-if (( $# != 1 )); then
-    print -u2 'Usage: ./scripts/test-desktop-guest.sh <absolute-scratch-result-directory>'
+if (( $# != 1 && $# != 3 )) || { (( $# == 3 )) && [[ "$2" != --case || "$3" != image-compression ]]; }; then
+    print -u2 'Usage: ./scripts/test-desktop-guest.sh <absolute-scratch-result-directory> [--case image-compression]'
     exit 64
 fi
 [[ "$(/usr/sbin/sysctl -n kern.hv_vmm_present 2>/dev/null)" == 1 \
@@ -21,6 +21,8 @@ fi
     exit 1
 }
 readonly output_directory="${1:A}"
+shift
+readonly -a selection_arguments=("$@")
 [[ "$output_directory" == "$project_root/.artifacts/scratch/tests/"* ]] || {
     print -u2 'Desktop evidence must stay inside the project scratch/tests directory.'
     exit 64
@@ -70,6 +72,6 @@ wait_for_process_ids_to_exit "$previous_main_pids" 100
     >"$output_directory/product-launch.log" 2>&1
 
 python3 "$desktop_job_runner" --timeout 900 "$output_directory/desktop-jobs/suite" -- \
-    "$helper_path" desktop-suite "$app_path" "$output_directory" \
+    "$helper_path" desktop-suite "$app_path" "$output_directory" "${selection_arguments[@]}" \
     >"$output_directory/desktop.stdout.log" 2>"$output_directory/desktop.stderr.log"
 print "Desktop acceptance evidence: $output_directory"

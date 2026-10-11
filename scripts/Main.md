@@ -13,7 +13,7 @@
 | `python3 scripts/prepare-test-signing.py` | 一次性通过宿主钥匙串系统授权初始化签名来源，验证后保存到用户私有配置 |
 | `./scripts/prepare-test-vm.sh` | 从公共基线全新准备项目模板，安装应用与公开配置、准备权限和缓存，成功后事务替换 |
 | `./scripts/test.sh` | 在 guest 构建当前代码，执行真实桌面流程、双语菜单、签名 IPC 与 8 个故障注入例外，单独记录人工检查项 |
-| `python3 scripts/test-vm.py desktop` | 在一次性 guest 单独执行产品桌面流程，导出自动检查与待人工检查报告 |
+| `python3 scripts/test-vm.py desktop [--case image-compression]` | 在一次性 guest 执行桌面流程；可只检查图片压缩，导出实际范围的报告与证据 |
 | `./scripts/test-integration.sh` | 在一次性 guest 运行独立签名 IPC 流程与实际文件结果检查 |
 | `./scripts/test-checks.sh` | 开发机默认进入 VM，普通 CI 在 runner 中执行构建、注册表、捕获定义与故障注入检查 |
 
@@ -35,7 +35,7 @@
 
 README 捕获在 guest 中通过真实模板管理页准备 TXT、Markdown，默认文件名为 `untitled.txt`、`untitled.md`，再拍摄真实 Finder 子菜单；重复 `--expect-template <title>` 参数提供独立的实际模板行顺序期望。fixture 输入、已提交索引、设置页截图和子菜单行回执随本轮证据导出。
 
-显式新建文件验收使用 `FinderMenuAutomation create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file>`，只有实际文件字节与独立预期一致、且 Finder 选中新文件才通过。批量产品流程由 `desktop-suite <debug.app> <output-directory>` 执行；README 的两模板准备由 `prepare-readme-templates <debug.app> <output-directory>` 执行。桌面命令限定在 guest，权限与启动责任进程遵循虚拟机协议。
+显式新建文件验收使用 `FinderMenuAutomation create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file>`，只有实际文件字节与独立预期一致、且 Finder 选中新文件才通过。批量产品流程由 `desktop-suite <debug.app> <output-directory> [--case image-compression]` 执行；README 的两模板准备由 `prepare-readme-templates <debug.app> <output-directory>` 执行。桌面命令限定在 guest，权限与启动责任进程遵循虚拟机协议。
 
 桌面工具经 `python3 Tests/Infrastructure/VirtualMachine/run-desktop-job.py [--timeout <seconds>] <new-result-directory> -- <absolute-executable> [arguments...]` 作为 GUI launchd 的直接子进程启动，保存输出与退出码。Preview 的 `window-image <window-id> <output.png>` 复用同一已授权的原生工具进行窗口截图；日常 `permissions` 只查询，项目模板通过系统设置添加并授权实际应用，再由新进程核对授权结果。
 

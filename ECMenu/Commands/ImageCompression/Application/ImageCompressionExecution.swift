@@ -5,15 +5,22 @@
 
 import Foundation
 
-/// 单项压缩需要的三个系统边界；日期失败与完整输出分别记录。
+/// 压缩所需的目录创建、图像编码、文件写入与日期设置边界。
 nonisolated struct ImageCompressionPlatform: Sendable {
     let encodedJPEG: @Sendable (URL, ImageCompressionSettings) throws -> Data
-    let writeJPEG: @Sendable (Data, URL) throws -> URL
+    let prepareOutputDirectory: @Sendable (URL) throws -> URL
+    let writeJPEG: @Sendable (Data, URL, URL) throws -> URL
     let setFileDates: @Sendable (URL, Date) throws -> Void
 }
 
 /// 在项目边界处理取消，逐项转换并排他写入，保留全部已生成输出。
 nonisolated enum ImageCompressionExecution {
+    /// 每个源父目录在本批次中只创建一次输出目录，或保存一次创建失败。
+    private enum OutputDirectory {
+        case created(URL)
+        case failed(SystemErrorSnapshot)
+    }
+
     static func execute(
         _ plan: ImageCompressionPlan,
         platform: ImageCompressionPlatform,
@@ -21,6 +28,7 @@ nonisolated enum ImageCompressionExecution {
     ) async -> ImageCompressionReport {
         var items: [ImageCompressionItemResult] = []
         var wasCancelled = false
+        var outputDirectories: [URL: OutputDirectory] = [:]
 
         for item in plan.items {
             if let progress, await progress.isCancellationRequested {
@@ -30,7 +38,8 @@ nonisolated enum ImageCompressionExecution {
             guard !Task.isCancelled else { break }
 
             items.append(autoreleasepool {
-                execute(item, settings: plan.settings, platform: platform)
+                execute(item, settings: plan.settings, platform: platform,
+                        outputDirectories: &outputDirectories)
             })
             if let progress {
                 await progress.advance()
@@ -43,7 +52,8 @@ nonisolated enum ImageCompressionExecution {
     private static func execute(
         _ item: ImageCompressionItemPlan,
         settings: ImageCompressionSettings,
-        platform: ImageCompressionPlatform
+        platform: ImageCompressionPlatform,
+        outputDirectories: inout [URL: OutputDirectory]
     ) -> ImageCompressionItemResult {
         let jpegData: Data
         do {
@@ -56,13 +66,38 @@ nonisolated enum ImageCompressionExecution {
             ))
         }
 
+        let sourceDirectory = item.sourceURL.deletingLastPathComponent()
+        let directory: OutputDirectory
+        if let existing = outputDirectories[sourceDirectory] {
+            directory = existing
+        } else {
+            do {
+                directory = .created(try platform.prepareOutputDirectory(sourceDirectory))
+            } catch {
+                directory = .failed(SystemErrorSnapshot(capturing: error))
+            }
+            outputDirectories[sourceDirectory] = directory
+        }
+
+        let outputDirectory: URL
+        switch directory {
+        case .created(let url):
+            outputDirectory = url
+        case .failed(let error):
+            return .failed(.destination(
+                sourceURL: item.sourceURL,
+                directoryURL: sourceDirectory,
+                error: error
+            ))
+        }
+
         let outputURL: URL
         do {
-            outputURL = try platform.writeJPEG(jpegData, item.sourceURL)
+            outputURL = try platform.writeJPEG(jpegData, item.sourceURL, outputDirectory)
         } catch {
             return .failed(.destination(
                 sourceURL: item.sourceURL,
-                directoryURL: item.sourceURL.deletingLastPathComponent(),
+                directoryURL: outputDirectory,
                 error: SystemErrorSnapshot(capturing: error)
             ))
         }

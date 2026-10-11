@@ -13,16 +13,51 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class DesktopAcceptanceSuite {
+    enum Case: String, CaseIterable, Encodable {
+        case templateManagement = "template-import-edit-and-restart"
+        case newFiles = "new-file-bytes-and-conflicts"
+        case replaceAndDelete = "template-replace-and-delete"
+        case copyAndVisibility = "copy-path-and-visibility"
+        case imageCompression = "image-compression"
+        case menuSettingsAndSession = "menu-settings-and-session"
+        case externalApplications = "external-application-menus-and-evidence"
+        case permissionFailure = "unwritable-target-feedback"
+        case libraryFailureAndEmpty = "template-library-failure-and-empty"
+    }
+
     struct Input {
+        enum Scope {
+            case all
+            case imageCompression
+
+            var cases: [Case] {
+                switch self {
+                case .all: Case.allCases
+                case .imageCompression: [.imageCompression]
+                }
+            }
+        }
+
         let appURL: URL
         let outputURL: URL
+        let scope: Scope
 
         static func parse(_ arguments: [String]) throws -> Self {
-            guard arguments.count == 3, arguments[1].hasPrefix("/"), arguments[2].hasPrefix("/") else {
+            guard [3, 5].contains(arguments.count), arguments[1].hasPrefix("/"), arguments[2].hasPrefix("/") else {
                 throw AutomationFailure.usage
             }
+            let scope: Scope
+            if arguments.count == 5 {
+                guard arguments[3] == "--case", arguments[4] == Case.imageCompression.rawValue else {
+                    throw AutomationFailure.usage
+                }
+                scope = .imageCompression
+            } else {
+                scope = .all
+            }
             return Self(appURL: URL(fileURLWithPath: arguments[1]).standardizedFileURL,
-                        outputURL: URL(fileURLWithPath: arguments[2]).standardizedFileURL)
+                        outputURL: URL(fileURLWithPath: arguments[2]).standardizedFileURL,
+                        scope: scope)
         }
     }
 
@@ -59,6 +94,7 @@ final class DesktopAcceptanceSuite {
     private struct Report: Encodable {
         let application: String
         let startedAt: Date
+        let selectedCases: [Case]
         var status: Status = .running
         var cases: [CaseResult] = []
         let visualVerification = "Screenshots are review evidence; no pixel assertions are implemented."
@@ -85,7 +121,7 @@ final class DesktopAcceptanceSuite {
         fixtureURL = input.outputURL.appendingPathComponent("fixtures", isDirectory: true)
         indexURL = URL.applicationSupportDirectory.appendingPathComponent(identifier)
             .appendingPathComponent("FileTemplates/index.json")
-        report = Report(application: input.appURL.path, startedAt: Date())
+        report = Report(application: input.appURL.path, startedAt: Date(), selectedCases: input.scope.cases)
     }
 
     func run() async throws -> Status {
@@ -96,31 +132,31 @@ final class DesktopAcceptanceSuite {
         do {
             app = try DesktopUI.application(input.appURL)
             try DesktopUI.activate(app)
-            try await check("template-import-edit-and-restart", steps: ["Open real File Templates page", "Import ordinary files through native chooser", "Click and edit both names", "Drag row and inspect persisted order", "Restart current product"]) {
+            try await check(.templateManagement, steps: ["Open real File Templates page", "Import ordinary files through native chooser", "Click and edit both names", "Drag row and inspect persisted order", "Restart current product"]) {
                 try await templateManagement()
             }
-            try await check("new-file-bytes-and-conflicts", steps: ["Open real Finder container menu", "Choose stored template", "Inspect bytes and selected new file", "Repeat with existing output"]) {
+            try await check(.newFiles, steps: ["Open real Finder container menu", "Choose stored template", "Inspect bytes and selected new file", "Repeat with existing output"]) {
                 try await newFiles()
             }
-            try await check("template-replace-and-delete", steps: ["Replace content through native chooser", "Create file from updated menu", "Delete template through its row button", "Check source and prior outputs survive"]) {
+            try await check(.replaceAndDelete, steps: ["Replace content through native chooser", "Create file from updated menu", "Delete template through its row button", "Check source and prior outputs survive"]) {
                 try await replaceAndDelete()
             }
-            try await check("copy-path-and-visibility", steps: ["Copy single, multi and container paths", "Hide and show through Finder", "Inspect flags and exact available commands"]) {
+            try await check(.copyAndVisibility, steps: ["Copy single, multi and container paths", "Hide and show through Finder", "Inspect flags and exact available commands"]) {
                 try await copyAndVisibility()
             }
-            try await check("image-compression", steps: ["Open settings from image selection", "Cancel without output", "Submit width and quality", "Decode actual JPEGs and check metadata, conflicts, dates and sources", "Compare actual low and high quality outputs from the same textured source"]) {
+            try await check(.imageCompression, steps: ["Open settings from image selection", "Cancel without creating a folder or output", "Submit width and quality with conflicting folder names", "Decode JPEGs in the new batch folder and check metadata, same-base-name conflicts, dates and sources", "Compare low and high quality outputs from separate batch folders"]) {
                 try await compressImages()
             }
-            try await check("menu-settings-and-session", steps: ["Toggle command visibility", "Drag command order", "Inspect fresh Finder menus", "Close configuration with Command-W and Command-Q", "Execute background command and reopen existing process"]) {
+            try await check(.menuSettingsAndSession, steps: ["Toggle command visibility", "Drag command order", "Inspect fresh Finder menus", "Close configuration with Command-W and Command-Q", "Execute background command and reopen existing process"]) {
                 try await menuSettingsAndSession()
             }
-            try await check("external-application-menus-and-evidence", steps: ["Click actual Finder commands for a file and folder", "Check applicable commands and application launch", "Capture every visible target application window", "Record independent targets for manual review"]) {
+            try await check(.externalApplications, steps: ["Click actual Finder commands for a file and folder", "Check applicable commands and application launch", "Capture every visible target application window", "Record independent targets for manual review"]) {
                 try await externalApplications()
             }
-            try await check("unwritable-target-feedback", steps: ["Select read-only folder", "Click New File template", "Inspect real error alert and absence of output"]) {
+            try await check(.permissionFailure, steps: ["Select read-only folder", "Click New File template", "Inspect real error alert and absence of output"]) {
                 try await permissionFailure()
             }
-            try await check("template-library-failure-and-empty", steps: ["Corrupt actual on-disk index and restart", "Inspect visible error and other Finder commands", "Restore index and use Retry", "Delete final template and restart"]) {
+            try await check(.libraryFailureAndEmpty, steps: ["Corrupt actual on-disk index and restart", "Inspect visible error and other Finder commands", "Restore index and use Retry", "Delete final template and restart"]) {
                 try await libraryFailureAndEmpty()
             }
             report.status = report.cases.contains { $0.status == .reviewPending } ? .reviewPending : .passed
@@ -156,7 +192,9 @@ final class DesktopAcceptanceSuite {
         }
     }
 
-    private func check(_ name: String, steps: [String], operation: () async throws -> Void) async throws {
+    private func check(_ selectedCase: Case, steps: [String], operation: () async throws -> Void) async throws {
+        guard input.scope.cases.contains(selectedCase) else { return }
+        let name = selectedCase.rawValue
         report.cases.append(CaseResult(name: name, steps: steps))
         try persist()
         let began = Date()

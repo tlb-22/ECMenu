@@ -113,30 +113,30 @@ nonisolated enum ImageCompressionAlertContent {
         case (.write, .all, .named(let name)):
             resource = LocalizedStringResource(
                 "alert.imageCompression.writePermission.all.named",
-                defaultValue: "Couldn’t compress “\(name)” because its folder isn’t writable.",
+                defaultValue: "Couldn’t compress “\(name)” because its output folder isn’t writable.",
                 locale: locale,
-                comment: "The named image could not be compressed because its containing folder is not writable"
+                comment: "The named image could not be compressed because its output folder is not writable"
             )
         case (.write, .all, .counted(let count)):
             resource = LocalizedStringResource(
                 "alert.imageCompression.writePermission.all.counted",
-                defaultValue: "Couldn’t compress the selected images because the folders containing \(count) images aren’t writable.",
+                defaultValue: "Couldn’t compress the selected images because the output folders for \(count) images aren’t writable.",
                 locale: locale,
-                comment: "No selected images could be compressed; the argument counts images whose containing folders are not writable"
+                comment: "No selected images could be compressed; the argument counts images whose output folders are not writable"
             )
         case (.write, .partial, .named(let name)):
             resource = LocalizedStringResource(
                 "alert.imageCompression.writePermission.partial.named",
-                defaultValue: "Some images couldn’t be compressed because the folder containing “\(name)” isn’t writable.",
+                defaultValue: "Some images couldn’t be compressed because the output folder for “\(name)” isn’t writable.",
                 locale: locale,
-                comment: "Other images were compressed, but the folder containing the named image is not writable"
+                comment: "Other images were compressed, but the output folder for the named image is not writable"
             )
         case (.write, .partial, .counted(let count)):
             resource = LocalizedStringResource(
                 "alert.imageCompression.writePermission.partial.counted",
-                defaultValue: "Some images couldn’t be compressed because the folders containing \(count) images aren’t writable.",
+                defaultValue: "Some images couldn’t be compressed because the output folders for \(count) images aren’t writable.",
                 locale: locale,
-                comment: "Other images were compressed; the argument counts images whose containing folders are not writable"
+                comment: "Other images were compressed; the argument counts images whose output folders are not writable"
             )
         }
         return String(localized: resource)

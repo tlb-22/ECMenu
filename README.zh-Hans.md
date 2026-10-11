@@ -78,4 +78,4 @@ ECMenu 以英文为源语言，并提供简体中文翻译。应用界面与 Fin
 
 ## 许可证
 
-本项目以 [MIT License](LICENSE) 发布。
+[MIT](LICENSE)

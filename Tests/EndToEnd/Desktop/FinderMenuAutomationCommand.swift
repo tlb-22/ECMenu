@@ -22,7 +22,7 @@ enum CLICommand {
         case submenu(parentTitle: String)
     }
 
-    static let usage = "Usage: FinderMenuAutomation preflight | permissions | prepare-capture <output.png> | prepare-external-applications <output-directory> | finder-windows | window-image <window-id> <output.png> | container <output.png> <directory> | items <output.png> <item> [item ...] | submenu <output.png> <directory> <parent-title> | create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file> | desktop-suite <debug.app> <output-directory> | prepare-readme-templates <debug.app> <output-directory>"
+    static let usage = "Usage: FinderMenuAutomation preflight | permissions | prepare-capture <output.png> | prepare-external-applications <output-directory> | finder-windows | window-image <window-id> <output.png> | container <output.png> <directory> | items <output.png> <item> [item ...] | submenu <output.png> <directory> <parent-title> | create-file <submenu.png> <directory> <parent-title> <template-title> <expected-file-name> <expected-content-file> | desktop-suite <debug.app> <output-directory> [--case image-compression] | prepare-readme-templates <debug.app> <output-directory>"
 
     static func parse(_ arguments: [String]) throws -> CLICommand {
         guard let command = arguments.first else { throw AutomationFailure.usage }
@@ -61,6 +61,7 @@ enum CLICommand {
         case "desktop-suite":
             return .desktopSuite(try DesktopAcceptanceSuite.Input.parse(arguments))
         case "prepare-readme-templates":
+            guard arguments.count == 3 else { throw AutomationFailure.usage }
             return .prepareReadmeTemplates(try DesktopAcceptanceSuite.Input.parse(arguments))
         default:
             throw AutomationFailure.usage

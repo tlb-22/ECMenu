@@ -78,4 +78,4 @@ See [Development Scripts](scripts/Main.md) for artifact locations and complete u
 
 ## License
 
-This project is released under the [MIT License](LICENSE).
+[MIT](LICENSE)

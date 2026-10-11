@@ -1,5 +1,5 @@
 /**
- 为需要避免覆盖的文件输出生成确定性的冲突候选名称。
+ 为需要避免覆盖的文件和目录输出生成确定性的冲突候选名称。
  以纯函数处理已有 copy 后缀和递增序号，候选是否可写由系统边界判断。
  */
 
@@ -11,9 +11,9 @@ import Foundation
 nonisolated enum FileCollisionNaming {
     /// 根据首选 URL 和从 `1` 开始的候选序号构造确定性 URL。
     /// - Parameters:
-    ///   - preferredURL: 没有冲突时使用的完整文件 URL。
+    ///   - preferredURL: 没有冲突时使用的完整文件或目录 URL。
     ///   - sequenceNumber: `1` 保留首选名称，后续依次使用 `_copy`、`_copy2`。
-    /// - Returns: 不读取文件系统的候选文件 URL。
+    /// - Returns: 不读取文件系统的候选 URL。
     static func candidateURL(
         for preferredURL: URL,
         sequenceNumber: Int

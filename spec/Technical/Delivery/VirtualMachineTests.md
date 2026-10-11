@@ -2,6 +2,8 @@
 
 测试桌面与开发桌面具有独立的 Finder、输入和应用状态。宿主封存公共工具模板，ECMenu 派生自己的项目模板，每轮从关机项目模板克隆并构建当前源码。入口和用例导航见 [Tests](../../../Tests/Main.md)。
 
+完整验收使用 `./scripts/test.sh`；图片压缩专项使用 `python3 scripts/test-vm.py desktop --case image-compression`。`--case` 仅由 `desktop` 接受，省略时执行全部桌面 case；筛选通过宿主输入传入 guest 与桌面驱动，并记录于宿主及 guest 报告。专项复用同一克隆、构建、证据导出和清理边界。
+
 ## 执行流
 
 ```mermaid

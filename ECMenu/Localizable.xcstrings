@@ -375,37 +375,37 @@
       }
     },
     "alert.imageCompression.writePermission.all.counted": {
-      "comment": "The folders containing the selected images are not writable",
+      "comment": "The output folders for the selected images are not writable",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn’t compress the selected images because the folders containing %lld images aren’t writable."
+            "value": "Couldn’t compress the selected images because the output folders for %lld images aren’t writable."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法压缩图片：%lld 张图片所在文件夹没有写入权限。"
+            "value": "无法压缩图片：%lld 张图片的输出文件夹无法写入。"
           }
         }
       }
     },
     "alert.imageCompression.writePermission.all.named": {
-      "comment": "The folder containing the named image is not writable",
+      "comment": "The output folder for the named image is not writable",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn’t compress “%@” because its folder isn’t writable."
+            "value": "Couldn’t compress “%@” because its output folder isn’t writable."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法压缩“%@”：其所在文件夹没有写入权限。"
+            "value": "无法压缩“%@”：输出文件夹无法写入。"
           }
         }
       }
@@ -417,31 +417,31 @@
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Some images couldn’t be compressed because the folders containing %lld images aren’t writable."
+            "value": "Some images couldn’t be compressed because the output folders for %lld images aren’t writable."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法压缩部分图片：%lld 张图片所在文件夹没有写入权限。"
+            "value": "无法压缩部分图片：%lld 张图片的输出文件夹无法写入。"
           }
         }
       }
     },
     "alert.imageCompression.writePermission.partial.named": {
-      "comment": "The folder containing the named image is not writable while other images succeeded",
+      "comment": "The output folder for the named image is not writable while other images succeeded",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Some images couldn’t be compressed because the folder containing “%@” isn’t writable."
+            "value": "Some images couldn’t be compressed because the output folder for “%@” isn’t writable."
           }
         },
         "zh-Hans": {
           "stringUnit": {
             "state": "translated",
-            "value": "无法压缩部分图片：“%@”所在文件夹没有写入权限。"
+            "value": "无法压缩部分图片：“%@”的输出文件夹无法写入。"
           }
         }
       }

@@ -1,5 +1,5 @@
 /**
- 独立生成图片输入，通过真实设置窗口验收取消、格式兼容、缩放、编码与持久化参数。
+ 独立生成图片输入，通过真实设置窗口验收取消、批次目录、格式兼容、缩放、编码与持久化参数。
  操作仅经过桌面驱动，断言读取真实外部结果；证据与报告由验收会话统一拥有。
  */
 
@@ -12,6 +12,32 @@ import ImageIO
 import UniformTypeIdentifiers
 
 extension DesktopAcceptanceSuite {
+    private struct CompressionDirectoryEvidence: Encodable {
+        let names: [String]
+        let directories: [String]
+        let jpegs: [String]
+    }
+
+    private func compressionDirectory(_ url: URL, evidence: String) throws -> CompressionDirectoryEvidence {
+        let entries = try FileManager.default.contentsOfDirectory(
+            at: url, includingPropertiesForKeys: [.isDirectoryKey, .isRegularFileKey])
+        var directories: [String] = []
+        var jpegs: [String] = []
+        for entry in entries {
+            let values = try entry.resourceValues(forKeys: [.isDirectoryKey, .isRegularFileKey])
+            if values.isDirectory == true { directories.append(entry.lastPathComponent) }
+            if values.isRegularFile == true && entry.pathExtension.lowercased() == "jpg" {
+                jpegs.append(entry.lastPathComponent)
+            }
+        }
+        let result = CompressionDirectoryEvidence(names: entries.map(\.lastPathComponent).sorted(),
+                                                  directories: directories.sorted(), jpegs: jpegs.sorted())
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        try encoder.encode(result).write(to: input.outputURL.appendingPathComponent("\(evidence)-directory.json"))
+        return result
+    }
+
     private func image(_ url: URL, width: Int, height: Int, type: UTType = .png,
                        orientation: Int = 1, textured: Bool = false,
                        color: CGColor = CGColor(red: 0.2, green: 0.6, blue: 0.8, alpha: 0.5)) throws {
@@ -77,11 +103,14 @@ extension DesktopAcceptanceSuite {
         let heic = directory.appendingPathComponent("modern.heic")
         let gif = directory.appendingPathComponent("animated.gif")
         let rotated = directory.appendingPathComponent("rotated.jpg")
+        let sameBaseName = directory.appendingPathComponent("large.jpg")
         try image(large, width: 320, height: 160)
         try image(small, width: 40, height: 20)
         try image(heic, width: 200, height: 100, type: .heic)
         try animatedImage(gif)
         try image(rotated, width: 320, height: 160, type: .jpeg, orientation: 6)
+        try image(sameBaseName, width: 320, height: 160, type: .jpeg,
+                  color: CGColor(red: 0.8, green: 0.2, blue: 0.2, alpha: 1))
         guard let privateSource = CGImageSourceCreateWithURL(rotated as CFURL, nil),
               let privateProperties = CGImageSourceCopyPropertiesAtIndex(privateSource, 0, nil) as? [String: Any],
               let exif = privateProperties[kCGImagePropertyExifDictionary as String] as? [String: Any],
@@ -91,7 +120,8 @@ extension DesktopAcceptanceSuite {
         try assert(exif[kCGImagePropertyExifUserComment as String] != nil && gps[kCGImagePropertyGPSLatitude as String] != nil,
                    "Independent source JPEG contains actual private EXIF and GPS fields before compression")
         let originalLarge = try Data(contentsOf: large), originalSmall = try Data(contentsOf: small)
-        let otherOriginals = try [heic, gif, rotated].map { ($0, try Data(contentsOf: $0)) }
+        let otherOriginals = try [heic, gif, rotated, sameBaseName].map { ($0, try Data(contentsOf: $0)) }
+        let initialDirectory = try compressionDirectory(directory, evidence: "compression-source-initial")
         try await menu(try items([large]), evidence: "compression-cancel", requiredTitles: ["Compress Images"]) { session, snapshot in
             try assert(snapshot.titles.contains("Compress Images"), "Supported ordinary image exposes compression")
             try session.pressItem(named: "Compress Images")
@@ -104,12 +134,23 @@ extension DesktopAcceptanceSuite {
             try AXClient.setValue(NSNumber(value: 3), for: kAXValueAttribute as CFString, on: slider)
             try DesktopUI.press(DesktopUI.find(compressionWindow(), role: kAXButtonRole, name: "Cancel"))
             try waitForCompressionSettingsToClose()
-            try assert(!FileManager.default.fileExists(atPath: directory.appendingPathComponent("large.jpg").path), "Cancel creates no JPEG output")
+            let cancelledDirectory = try compressionDirectory(directory, evidence: "compression-source-cancelled")
+            try assert(cancelledDirectory.directories == initialDirectory.directories
+                       && cancelledDirectory.jpegs == initialDirectory.jpegs,
+                       "Cancel creates neither a batch folder nor a JPEG output")
         }
-        let conflict = directory.appendingPathComponent("large.jpg")
-        try Data("existing output".utf8).write(to: conflict)
-        let expectedOutputs = ["animated.jpg", "large_copy.jpg", "modern.jpg", "rotated_copy.jpg", "small.jpg"].map { directory.appendingPathComponent($0) }
-        try await menu(try items([large, small, heic, gif, rotated]), evidence: "compression-confirm", requiredTitles: ["Compress Images"]) { session, _ in
+        let conflict = directory.appendingPathComponent("compressed")
+        let existingFolder = directory.appendingPathComponent("compressed_copy", isDirectory: true)
+        let sentinel = existingFolder.appendingPathComponent("keep.txt")
+        let conflictBytes = Data("existing ordinary file".utf8)
+        let sentinelBytes = Data("existing folder content".utf8)
+        try conflictBytes.write(to: conflict)
+        try FileManager.default.createDirectory(at: existingFolder, withIntermediateDirectories: false)
+        try sentinelBytes.write(to: sentinel)
+        let outputDirectory = directory.appendingPathComponent("compressed_copy2", isDirectory: true)
+        let expectedOutputs = ["animated.jpg", "large.jpg", "large_copy.jpg", "modern.jpg", "rotated.jpg", "small.jpg"]
+            .map { outputDirectory.appendingPathComponent($0) }
+        try await menu(try items([large, small, heic, gif, rotated, sameBaseName]), evidence: "compression-confirm", requiredTitles: ["Compress Images"]) { session, _ in
             try session.pressItem(named: "Compress Images")
             let field = try DesktopUI.find(compressionWindow(), role: kAXTextFieldRole)
             let slider = try DesktopUI.find(compressionWindow(), role: kAXSliderRole)
@@ -126,8 +167,11 @@ extension DesktopAcceptanceSuite {
             let _: Bool = try DesktopUI.wait("Finder did not select every successful JPEG output") { try session.hasExactlySelectedItems(expectedOutputs) ? true : nil }
             try assert(true, "Finder selects the complete successful output set")
         }
-        for (name, width, height) in [("large_copy.jpg", 80, 40), ("small.jpg", 40, 20), ("modern.jpg", 80, 40), ("animated.jpg", 80, 40), ("rotated_copy.jpg", 80, 160)] {
-            let url = directory.appendingPathComponent(name)
+        let outputEvidence = try compressionDirectory(outputDirectory, evidence: "compression-batch")
+        try assert(Set(outputEvidence.jpegs) == Set(expectedOutputs.map(\.lastPathComponent)),
+                   "The confirmed batch folder contains exactly its successful JPEG outputs")
+        for (name, width, height) in [("large.jpg", 80, 40), ("large_copy.jpg", 80, 40), ("small.jpg", 40, 20), ("modern.jpg", 80, 40), ("animated.jpg", 80, 40), ("rotated.jpg", 80, 160)] {
+            let url = outputDirectory.appendingPathComponent(name)
             guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
                   let output = CGImageSourceCreateImageAtIndex(source, 0, nil),
                   let properties = CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [String: Any] else {
@@ -160,17 +204,14 @@ extension DesktopAcceptanceSuite {
         for index in 1..<dates.count {
             try assert(abs(dates[index].timeIntervalSince(dates[index - 1]) - 1) < 0.001, "Outputs receive one-second dates in independently expected Finder filename order")
         }
-        let gifPixel = try rgbSample(directory.appendingPathComponent("animated.jpg"))
+        let gifPixel = try rgbSample(outputDirectory.appendingPathComponent("animated.jpg"))
         try assert(zip(gifPixel, [51, 153, 204]).allSatisfy { pair in abs(pair.0 - pair.1) < 20 },
                    "Animated GIF output renders its blue first frame rather than the red second frame")
-        let pixel = try rgbSample(directory.appendingPathComponent("large_copy.jpg"))
+        let pixel = try rgbSample(outputDirectory.appendingPathComponent("large_copy.jpg"))
         try assert(abs(pixel[0] - 153) < 20 && abs(pixel[1] - 204) < 20 && abs(pixel[2] - 230) < 20,
                    "Transparent PNG pixels are composited over white in the actual JPEG")
-        try assert(try Data(contentsOf: conflict) == Data("existing output".utf8), "Compression preserves conflicting existing output")
-        try assert(try Data(contentsOf: large) == originalLarge && Data(contentsOf: small) == originalSmall, "Compression preserves source bytes")
-        for (url, bytes) in otherOriginals {
-            try assert(try Data(contentsOf: url) == bytes, "Compression preserves \(url.lastPathComponent) source bytes")
-        }
+        try assert(!FileManager.default.fileExists(atPath: outputDirectory.appendingPathComponent("rotated_copy.jpg").path),
+                   "A source JPEG keeps its base filename inside the new batch folder")
         try await menu(try items([small]), evidence: "compression-persisted-settings", requiredTitles: ["Compress Images"]) { session, _ in
             try session.pressItem(named: "Compress Images")
             let field = try DesktopUI.find(compressionWindow(), role: kAXTextFieldRole)
@@ -184,9 +225,21 @@ extension DesktopAcceptanceSuite {
             try assert(!snapshot.titles.contains("Compress Images") && snapshot.titles.contains("Copy Path") && snapshot.titles.contains("Hide Items"), "Mixed image and plain-file selection omits compression while retaining applicable file commands")
         }
         try await compressionQuality()
-        let expectedNames = Set(["anchor.txt", "large.png", "small.png", "modern.heic", "animated.gif", "rotated.jpg", "large.jpg"] + expectedOutputs.map(\.lastPathComponent))
-        try assert(try Set(FileManager.default.contentsOfDirectory(atPath: directory.path)) == expectedNames,
-                   "Completed image case contains exactly the original files, conflict and confirmed outputs; cancelled requests leave no delayed output")
+        let completedDirectory = try compressionDirectory(directory, evidence: "compression-source-completed")
+        try assert(Set(completedDirectory.directories) == ["compressed_copy", "compressed_copy2"]
+                   && completedDirectory.jpegs == initialDirectory.jpegs,
+                   "The source folder gains only the confirmed batch folder beside the preserved conflict folder, with no new adjacent JPEGs")
+        try assert(try Data(contentsOf: conflict) == conflictBytes,
+                   "A conflicting ordinary file named compressed is preserved")
+        let existingFolderEvidence = try compressionDirectory(existingFolder, evidence: "compression-conflict-folder")
+        try assert(try Data(contentsOf: sentinel) == sentinelBytes
+                   && existingFolderEvidence.directories.isEmpty && existingFolderEvidence.jpegs.isEmpty,
+                   "The conflicting compressed_copy folder retains its original bytes without new JPEGs or subfolders")
+        try assert(try Data(contentsOf: large) == originalLarge && Data(contentsOf: small) == originalSmall,
+                   "Compression and cancelled requests preserve source bytes")
+        for (url, bytes) in otherOriginals {
+            try assert(try Data(contentsOf: url) == bytes, "Compression preserves \(url.lastPathComponent) source bytes")
+        }
     }
 
     private func compressionWindow() throws -> AXUIElement {
@@ -217,8 +270,9 @@ extension DesktopAcceptanceSuite {
         try image(sourceURL, width: 512, height: 256, textured: true)
         let original = try Data(contentsOf: sourceURL)
         var sizes: [Int] = []
-        for (quality, name) in [(2, "textured.jpg"), (10, "textured_copy.jpg")] {
-            let outputURL = directory.appendingPathComponent(name)
+        for (quality, folderName) in [(2, "compressed"), (10, "compressed_copy")] {
+            let outputDirectory = directory.appendingPathComponent(folderName, isDirectory: true)
+            let outputURL = outputDirectory.appendingPathComponent("textured.jpg")
             try await menu(try items([sourceURL]), evidence: "compression-quality-\(quality)", requiredTitles: ["Compress Images"]) { session, _ in
                 try session.pressItem(named: "Compress Images")
                 try DesktopUI.edit(DesktopUI.find(compressionWindow(), role: kAXTextFieldRole), in: axApp,
@@ -242,11 +296,17 @@ extension DesktopAcceptanceSuite {
             try assert(CGImageSourceGetType(source) as String? == UTType.jpeg.identifier
                        && decoded.width == 512 && decoded.height == 256,
                        "Quality \(quality) produces a decodable JPEG with unchanged dimensions")
+            let outputEvidence = try compressionDirectory(outputDirectory, evidence: "compression-quality-\(quality)-batch")
+            try assert(outputEvidence.jpegs == ["textured.jpg"],
+                       "Quality \(quality) creates its own \(folderName) batch folder with the original base filename")
             sizes.append(try Data(contentsOf: outputURL).count)
         }
         try Data("quality\tbytes\n2\t\(sizes[0])\n10\t\(sizes[1])\n".utf8)
             .write(to: input.outputURL.appendingPathComponent("compression-quality.tsv"))
         try assert(sizes[0] < sizes[1], "Lower confirmed quality reduces actual JPEG bytes for the same textured source")
         try assert(try Data(contentsOf: sourceURL) == original, "Both quality submissions preserve the source image bytes")
+        let sourceEvidence = try compressionDirectory(directory, evidence: "compression-quality-source")
+        try assert(Set(sourceEvidence.directories) == ["compressed", "compressed_copy"] && sourceEvidence.jpegs.isEmpty,
+                   "Two confirmed commands create two separate batch folders and no adjacent JPEGs")
     }
 }
