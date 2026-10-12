@@ -16,7 +16,7 @@ ECMenu is intentionally small and focused. It provides a concise set of frequent
 The codebase prioritizes clear structure and type safety, so developers can add, change, or remove menu commands for their own needs.
 
 <p align="center">
-  <img src=".docs/images/overview-v1.1.1-en.png" width="100%" alt="ECMenu General, Context Menu, and File Templates settings beside Finder’s context menu with New File expanded">
+  <img src=".docs/images/overview-v1.1.2-en.png" width="100%" alt="ECMenu General, Context Menu, and File Templates settings beside Finder’s context menu with New File expanded">
 </p>
 
 ## Features

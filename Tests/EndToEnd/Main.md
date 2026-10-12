@@ -5,4 +5,4 @@
 - `Desktop/`：Finder 菜单、设置窗口、原生对话框和桌面命令；完整产品场景位于 `Acceptance/`，菜单上下文、语言定义与原生驱动由同一模块维护。
 - `IPC/`：独立签名 Sender，用于配置查询、身份拒绝、协议错误和文件副作用验收。
 
-局部修改按对应用户流程执行针对性验证，完整验收用于较大修改或版本发布前。入口与证据限制见[测试总述](../Main.md)，执行边界见[虚拟机协议](../../spec/Technical/Delivery/VirtualMachineTests.md)。
+持续功能开发期间在本机进行针对性的简单手动测试；正式发布前在虚拟机中完整验收并检查报告与产物。入口与证据限制见[测试总述](../Main.md)，执行边界见[虚拟机协议](../../spec/Technical/Delivery/VirtualMachineTests.md)。

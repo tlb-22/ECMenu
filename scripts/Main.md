@@ -51,4 +51,4 @@ README 捕获在 guest 中通过真实模板管理页准备 TXT、Markdown，默
 
 项目模板必须关机，准备始终从公共基线建立新候选，来宾正常关机完成后事务替换；日常验收克隆项目模板使用已封存的应用、权限和构建缓存，引导前检查项目 scratch 不存在。公开启动设置、应用版本与封存边界在[虚拟机协议](../spec/Technical/Delivery/VirtualMachineTests.md#环境与缓存)维护，预热及普通启动截图不代替产品流程验收。普通源码变化直接同步并增量构建；工具、目标应用或公共封存变化时重新准备，构建耗时明显增加时可主动刷新缓存。共享 `.derivedData/` 或 Finder 登记状态的手动脚本顺序执行，虚拟机调度使用所有项目共用的内核锁。
 
-本机环境目录、模板名称、来宾工作区和宿主应用来源由被 Git 忽略的 `Tests/Infrastructure/VirtualMachine/Local.json` 提供，填写格式见[本机配置](../Tests/Infrastructure/VirtualMachine/Main.md#本机配置)。小功能按影响范围做针对性检查，大修改与发布前再运行完整测试。
+本机环境目录、模板名称、来宾工作区和宿主应用来源由被 Git 忽略的 `Tests/Infrastructure/VirtualMachine/Local.json` 提供，填写格式见[本机配置](../Tests/Infrastructure/VirtualMachine/Main.md#本机配置)。持续开发期间在本机进行针对性的简单手动测试；正式发布前在虚拟机中完整验收并检查报告与产物。

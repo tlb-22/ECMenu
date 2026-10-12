@@ -31,7 +31,7 @@ flowchart TB
 
 ## 测试、预览与真实界面捕获
 
-小功能按影响范围做对应用户流程检查，大修改与发布前执行完整验收。`test.sh` 通过宿主调度一次性 macOS 虚拟机，源码同步、真实签名构建、桌面操作及外部结果核验均在 guest 执行。项目预热、临时签名、共用锁与清理协议由[虚拟机端到端测试](VirtualMachineTests.md)维护，用例入口见 [Tests](../../../Tests/Main.md)。
+持续功能开发期间，在本机进行针对性的简单手动测试；正式发布前执行完整虚拟机验收并检查报告与产物。`test.sh` 通过宿主调度一次性 macOS 虚拟机，源码同步、真实签名构建、桌面操作及外部结果核验均在 guest 执行。项目预热、临时签名、共用锁与清理协议由[虚拟机端到端测试](VirtualMachineTests.md)维护，用例入口见 [Tests](../../../Tests/Main.md)。
 
 | 职责模块 | 核心入口 | 输入与外部 API | 输出与成功边界 |
 |---|---|---|---|
@@ -65,6 +65,8 @@ flowchart LR
 | 发布编排 | [build-release.sh](../../../scripts/build-release.sh) | version/build、签名配置、项目 | `xcodebuild archive`、`codesign`、打包/解压、校验和工具 | Archive、ZIP、校验和；拒绝静默覆盖已有非空版本目录 |
 
 正式交付路径、签名限制和身份值以[交付文档](../Delivery/Main.md)为准。当前发布脚本不执行网络发布。产品源、测试定义和持久文档都不依赖 scratch 产物；共享 Derived Data 或 Finder 登记状态的脚本必须顺序执行。
+
+版本准备同步更新版本号、简洁的更新说明及版本化 README 图片，在虚拟机中完成完整验收，再生成正式归档与 ZIP。新 Release 应用安装到 `/Applications/` 后，停止 Debug 应用并执行 `./scripts/activate-environment.sh release`，确认主应用与 Finder Extension 的版本、登记及运行路径。每次发布清理 `.derivedData/` 与 `.artifacts/scratch/`；删除前停止并注销其中的应用与扩展，验收结论保存在技术文档，正式交付物保留在版本目录。提交、标签和远程发布分别遵循 Git 写操作授权。
 
 ## 源码与资源边界
 

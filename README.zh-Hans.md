@@ -16,7 +16,7 @@ ECMenu 是一个 macOS Finder 的右键增强工具。
 项目注重代码结构和类型安全，开发者可以根据自己的需求自定义添加、修改或移除菜单功能。
 
 <p align="center">
-  <img src=".docs/images/overview-v1.1.1-zh-Hans.png" width="100%" alt="ECMenu 通用、右键菜单和文件模板设置，以及展开新建文件的 Finder 右键菜单">
+  <img src=".docs/images/overview-v1.1.2-zh-Hans.png" width="100%" alt="ECMenu 通用、右键菜单和文件模板设置，以及展开新建文件的 Finder 右键菜单">
 </p>
 
 ## 功能

@@ -37,6 +37,7 @@
 - 每次 release 时清理 `.derivedData/` 与 `.artifacts/scratch/`。
 - 可重复执行的测试与预览定义维护在 `Tests/`（预览宿主位于 `Tests/ECMenuPreviews/`），诊断入口维护在 `scripts/`；源码、正式配置和持久文档不得依赖 `scratch/`，需要保留的结论写入相应文档。
 - 正式交付物位于 `.artifacts/releases/<version>+<build>/`；已有的非空版本目录不得静默覆盖。
+- 发布环境切换：新版本构建完成后，将 Release 应用安装到 `/Applications/`，停止 Debug 应用并使用 `./scripts/activate-environment.sh release` 切换本机应用与 Finder Extension，核对版本及运行路径。
 - 日常 Debug 构建与运行使用 `./scripts/run-debug.sh`，完整测试使用 `./scripts/test.sh`；共享 `.derivedData/` 或 Finder 登记状态的脚本顺序执行。删除 `.derivedData/` 前，先停止并注销从其中运行的应用和 Finder Extension。
 - 图标变化但程序坞仍显示旧缓存时使用 `./scripts/run-debug.sh --refresh-icon`；Finder Extension 源码变化、菜单消失或扩展未加载时使用 `./scripts/run-debug.sh --refresh-finder`。
 
@@ -44,7 +45,7 @@
 
 - 端到端优先：必须优先使用端到端测试，以真实用户流程验证功能交付，不得以单元测试替代完整流程验收；测试必须产出可检查且可重复生成的结果。
 - 严格限制单测：只有关键行为难以通过端到端测试有效验证时才允许单元测试，且必须先写测试、再写实现；测试前明确真实失败模式，禁止事后围绕既有实现补写单测。
-- 测试成本控制：小功能只需要针对性简单手动测试，不需要运行完整测试；只有大修改或者版本发布前才进行完整测试。
+- 分阶段测试：持续功能开发期间，只在本机进行针对性的简单手动测试验证当前改动，日常开发默认不运行完整测试；正式发布前，在虚拟机中运行完整自动化测试，并检查报告与产物。
 
 ## Finder Extension 调试
 
